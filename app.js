@@ -176,7 +176,12 @@ const groupHtml = g => {
   </section>`;
 };
 
-const renderCount = () => document.querySelectorAll('.js-approve').forEach(el => { el.textContent = api.approvedCount(); });
+const MIN_APPROVED = 50;   // about half accept, so 50 approved fills the 25 spots
+const renderCount = () => {
+  const n = api.approvedCount();
+  document.querySelectorAll('.js-approve').forEach(el => { el.textContent = n; });
+  document.querySelectorAll('.m-foot').forEach(f => f.classList.toggle('warn', n < MIN_APPROVED));
+};
 
 // V1 and V2 render the same groups; each popup keeps its own open/loaded state
 const groups = api.groups().map(g => ({ ...g, hide: g.id === 'approved' ? 'Hide previously approved' : 'Hide new creators' }));
@@ -439,8 +444,163 @@ const setOpen = open => {
 document.querySelectorAll('.m-close').forEach(b => b.addEventListener('click', () => setOpen(false)));
 overlay.addEventListener('click', () => setOpen(false));
 $('openModal').addEventListener('click', () => setOpen(true));
-document.querySelectorAll('.approve-btn').forEach(b => b.addEventListener('click', () => setOpen(false)));
-document.addEventListener('keydown', e => { if (e.key === 'Escape') setOpen(false); });
+document.querySelectorAll('.approve-btn').forEach(b => b.addEventListener('click', () => openSummary(b)));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') (summaryOpen() ? closeSummary() : setOpen(false)); });
+
+// ---------- Invite summary pop-up ("Ready to send N invites?") ----------
+// Read-only: summarizes who gets invited, in what order, and who doesn't. Go back keeps every selection.
+const sum = $('sum');
+const sumDlg = sum.querySelector('.sum-dlg');
+const FACES = 5;
+let sumOpener = null;
+let sumCloseT;
+const summaryOpen = () => !sum.hidden;
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+const invites = n => plural(n, 'invite', 'invites');
+const esc = t => t.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+
+function summaryData() {
+  const all = api.groups().flatMap(g => g.creators);
+  const kept = all.filter(c => !c.notFit);
+  const rest = kept.filter(c => !c.priority);
+  return {
+    prio: kept.filter(c => c.priority),   // prioritized and then removed counts only as Not a fit
+    rest,
+    nofit: all.filter(c => c.notFit),
+    prev: rest.filter(c => c.source === 'approved').length,
+    fresh: rest.filter(c => c.source === 'new').length,
+  };
+}
+
+const ICONS = {
+  prio: '<img src="assets/prioritize-16-purple.svg" alt="" width="16" height="16">',
+  rest: '<img src="assets/card-bullet-16.svg" alt="" width="16" height="16">',
+  nofit: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 7h7"/></svg>',
+};
+
+const rowHtml2 = (kind, title, sub, people, r) => `
+  <li class="sum-row ${kind}" style="--r:${r}" title="${esc(people.map(c => c.name).join(', '))}">
+    <span class="sum-mark ${kind}">${ICONS[kind]}</span>
+    <span class="sum-text"><span class="sum-row-title">${title}</span><span class="sum-row-sub">${sub}</span></span>
+    <span class="sum-faces">
+      <span class="sum-stack">${people.slice(0, FACES).map(c => `<img src="assets/${c.avatar}.jpg" alt="">`).join('')}</span>
+      ${people.length > FACES ? `<span class="sum-more">+${people.length - FACES}</span>` : ''}
+    </span>
+  </li>`;
+
+function summaryHtml(d, error) {
+  const n = d.prio.length + d.rest.length;
+  const parts = [d.prev && `${d.prev} you've worked with`, d.fresh && `${d.fresh} new`].filter(Boolean);
+  const rows = [];
+  if (d.prio.length) rows.push(['prio', `Prioritized (${d.prio.length})`, 'Invited first', d.prio]);
+  if (d.rest.length) rows.push(d.prio.length
+    ? ['rest', `Everyone else (${d.rest.length})`, ['Invited right after', ...parts].join(' · '), d.rest]
+    : ['rest', `Your matches (${d.rest.length})`, parts.join(' · '), d.rest]);
+  if (d.nofit.length) rows.push(['nofit', `Not a fit (${d.nofit.length})`, "Won't get an invite", d.nofit]);
+  return `
+  <div class="sum-view">
+    <div class="sum-top">
+      <div class="sum-head">
+        <h2 class="sum-title" id="sumTitle">${n ? `Ready to send ${invites(n)}?` : 'Nobody to invite yet'}</h2>
+        <p class="sum-sub">${n ? "Here's who hears from us, and in what order. Need a change? Go back and edit your list."
+                              : 'You marked everyone as Not a fit. Go back and keep at least one creator.'}</p>
+      </div>
+      <ul class="sum-rows">${rows.map((row, i) => rowHtml2(...row, i)).join('')}</ul>
+    </div>
+    ${error ? `<p class="sum-error" role="alert">${error}</p>` : ''}
+    <div class="sum-foot">
+      <button class="sum-back" data-sum="back">Go back</button>
+      <button class="sum-send" data-sum="send"${n ? '' : ' disabled'}>${n ? `Send ${invites(n)}` : 'Send invites'}</button>
+    </div>
+  </div>`;
+}
+
+function doneHtml(n, prio) {
+  const first = prio ? (prio === 1 ? 'Your 1 prioritized creator hears from us first. ' : `Your ${prio} prioritized creators hear from us first. `) : '';
+  return `
+  <div class="sum-view">
+    <div class="sum-done">
+      <span class="sum-done-mark"><img src="assets/card-bullet-16.svg" alt="" width="16" height="16"></span>
+      <h2 class="sum-done-title" id="sumTitle">${invites(n)} on the way</h2>
+      <p class="sum-done-body">${first}We'll email you as creators accept, and handle the follow-ups for anyone who's slow to reply.</p>
+      <div class="sum-foot"><button class="sum-send" data-sum="close">Back to campaign</button></div>
+    </div>
+  </div>`;
+}
+
+function focusPrimary() {
+  const send = sumDlg.querySelector('.sum-send:not(:disabled)');
+  (send || sumDlg.querySelector('.sum-back')).focus();
+}
+
+function openSummary(opener) {
+  clearTimeout(sumCloseT);
+  sumOpener = opener;
+  sumDlg.innerHTML = summaryHtml(summaryData());
+  sum.hidden = false;
+  void sum.offsetWidth;   // start from the hidden pose so the enter transition runs
+  sum.classList.add('in');
+  focusPrimary();
+}
+
+function closeSummary() {
+  if (!summaryOpen()) return;
+  sum.classList.remove('in');
+  clearTimeout(sumCloseT);
+  sumCloseT = setTimeout(() => { sum.hidden = true; sumDlg.innerHTML = ''; }, 260);
+  if (sumOpener && !sumOpener.disabled) sumOpener.focus();
+}
+
+// Fade the dialog's contents out, swap the view, fade back in; the dialog itself stays open
+function swapView(html) {
+  const view = sumDlg.querySelector('.sum-view');
+  view.classList.add('out');
+  setTimeout(() => {
+    sumDlg.innerHTML = html;
+    const next = sumDlg.querySelector('.sum-view');
+    next.classList.add('out');
+    void next.offsetWidth;
+    next.classList.remove('out');
+    focusPrimary();
+  }, 140);
+}
+
+async function sendInvites(btn) {
+  const d = summaryData();
+  const ids = [...d.prio, ...d.rest].map(c => c.id);   // invite order: prioritized first
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  try {
+    await api.sendInvites(ids);
+  } catch {
+    // Keep the summary on screen, with a clear error above the footer
+    sumDlg.innerHTML = summaryHtml(d, "We couldn't send the invites. Check your connection and try again.");
+    sumDlg.querySelectorAll('.sum-row').forEach(r => { r.style.animation = 'none'; });
+    focusPrimary();
+    return;
+  }
+  document.querySelectorAll('.approve-btn').forEach(b => {
+    b.disabled = true;
+    b.innerHTML = `<span>${invites(ids.length)} sent</span>`;
+  });
+  swapView(doneHtml(ids.length, d.prio.length));
+}
+
+sum.addEventListener('click', e => {
+  if (e.target === sum) return closeSummary();   // backdrop = Go back
+  const act = e.target.closest('[data-sum]')?.dataset.sum;
+  if (act === 'back' || act === 'close') closeSummary();
+  else if (act === 'send') sendInvites(e.target.closest('[data-sum]'));
+});
+// Keep Tab inside the dialog: it only moves between its buttons
+sum.addEventListener('keydown', e => {
+  if (e.key !== 'Tab') return;
+  const btns = [...sumDlg.querySelectorAll('button:not(:disabled)')];
+  if (!btns.length) return;
+  const i = btns.indexOf(document.activeElement);
+  e.preventDefault();
+  btns[(i + (e.shiftKey ? -1 : 1) + btns.length) % btns.length].focus();
+});
 
 // ---------- Prototype version switch (V1 / V2 / V3), remembered per browser ----------
 try { version = localStorage.getItem('invite-version') || 'v2'; } catch {}

@@ -88,9 +88,20 @@ const mockApi = (() => {
     },
   ];
 
+  // Demo shortcut: ?notfit=26 starts with that many new creators marked Not a Fit (e.g. to see the below-50 warning)
+  const preset = parseInt(new URLSearchParams(location.search).get('notfit'), 10);
+  if (preset > 0) newCreators.slice(0, preset).forEach(c => { c.notFit = true; });
+
   const find = id => groups.flatMap(g => g.creators).find(c => c.id === id);
   const clone = g => ({ ...g, creators: g.creators.map(c => ({ ...c })) });
+  // Sends the invites. Resolves like a network call; ?sendfail=1 makes it fail, to try the error state.
+  const sendInvites = ids => new Promise((resolve, reject) => setTimeout(() => {
+    if (new URLSearchParams(location.search).get('sendfail')) reject(new Error('send failed'));
+    else { console.log('[mock api] send invites', ids); resolve({ sent: ids.length }); }
+  }, 700));
+
   return {
+    sendInvites,
     groups: () => groups.map(clone),
     get: id => ({ ...find(id) }),
     // Creators still headed for approval: everyone minus the ones marked Not a Fit
