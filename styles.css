@@ -307,8 +307,8 @@ img { display: block; max-width: none; }
 .m-foot { position: absolute; left: -1px; right: 0; bottom: -1px; height: 80px; background: #fff; border-top: 1px solid #eceff3; }
 /* Shown when fewer than 50 creators are left to approve */
 .m-warn {
-  position: absolute; left: 32px; top: 50%; transform: translateY(-50%);
-  font-size: 14px; font-weight: 400; line-height: normal; color: #a85321; white-space: nowrap;
+  position: absolute; left: 32px; right: 308px; top: 50%; transform: translateY(-50%);   /* wraps, stopping 24px short of the Approve button */
+  font-size: 14px; font-weight: 400; line-height: 1.4; color: #a85321;
   opacity: 0; visibility: hidden; transition: opacity .2s, visibility 0s .2s;
 }
 .m-foot.warn .m-warn { opacity: 1; visibility: visible; transition: opacity .2s; }
@@ -473,6 +473,47 @@ img { display: block; max-width: none; }
   .sum, .sum-dlg, .sum-view { transition-duration: 1ms !important; }
   .sum-row, .sum-done-mark { animation: none !important; }
 }
+
+/* ===== Not a fit feedback (Figma 15343:68271); shares the summary's blurred backdrop ===== */
+.fit-dlg {
+  position: relative; width: min(517px, 100% - 32px); height: 550px; max-height: 100%; overflow: hidden;
+  background: #f9fafb; border: 0.5px solid #d5d5d5; border-radius: 24px;
+  opacity: 0; transform: translateY(10px) scale(.97);
+  transition: opacity .22s, transform .34s var(--ease);
+}
+.sum.in .fit-dlg { opacity: 1; transform: none; }
+.fit-close { position: absolute; right: 23.5px; top: 19.5px; width: 16px; height: 16px; }
+.fit-body { position: absolute; left: 41.5px; right: 41.5px; top: 64px; display: flex; flex-direction: column; align-items: center; gap: 24px; }
+.fit-who { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.fit-av { position: relative; width: 60px; height: 60px; border: 1px solid #fff; border-radius: 100px; background: #fff; overflow: hidden; }
+.fit-av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.fit-id { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.fit-name-row { display: flex; align-items: center; gap: 4px; }
+.fit-spacer { width: 16px; height: 16px; }   /* balances the badge so the name stays centered */
+.fit-name { font-size: 16px; font-weight: 700; line-height: normal; color: #1c1c1c; white-space: nowrap; }
+.fit-handle { font-size: 13px; font-weight: 500; line-height: normal; color: #717171; white-space: nowrap; }
+.fit-text { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.fit-title { width: 384.434px; font-size: 18px; font-weight: 700; line-height: normal; color: #1c1c1c; }
+.fit-sub { width: 349.629px; font-size: 16px; font-weight: 400; line-height: 20px; color: #717171; }
+.fit-input {
+  display: block; width: 100%; height: 65px; padding: 14px 16px; resize: none;
+  background: #fff; border: 1px solid #ddd; border-radius: 12px; outline: none;
+  font: 400 16px/normal 'Inter', sans-serif; color: #1c1c1c;
+  transition: border-color .15s;
+}
+.fit-input::placeholder { color: #b0b0b0; }
+.fit-input:focus { border-color: #7a5cfa; }
+.fit-foot { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 41.5px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.fit-send {
+  width: 100%; height: 48px; padding: 14px 24px; border-radius: 44px; background: #7a5cfa;
+  font-family: "Helvetica Neue", Inter, sans-serif; font-size: 18px; font-weight: 500; line-height: normal; color: #fff; text-align: center;
+  transition: opacity .15s, transform .1s;
+}
+.fit-send:disabled { opacity: .3; cursor: default; }
+.fit-send:not(:disabled):active { transform: scale(.98); }
+.fit-cancel { width: 100%; height: 48px; padding: 12px 24px; border-radius: 44px; font-size: 14px; font-weight: 600; line-height: 24px; color: #1c1c1c; text-align: center; transition: background .15s; }
+.fit-cancel:hover { background: rgba(0,0,0,.04); }
+@media (prefers-reduced-motion: reduce) { .fit-dlg { transition-duration: 1ms !important; } }
 
 /* ===== Prototype version switch ===== */
 .ver {

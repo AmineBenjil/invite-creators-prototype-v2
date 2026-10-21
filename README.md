@@ -10,6 +10,7 @@ A copy of [invite-creators-prototype](https://github.com/AmineBenjil/invite-crea
 - **V2: Approve creators popup** (Figma 15308:18705): we've picked 75 creators, split into **Previously approved creators** (18) and **New creators** (57). Each group is a collapsed bar (avatar stack, names, chevron).
 - **Previously approved dropdown** (Figma 15314:50788): opens into 18 cards with a "Previously approved" tag and what happened last time.
 - **New creators dropdown** (Figma 15313:23476): opens into 57 creator cards. In both lists, **Not a Fit** collapses a card in place into a one-line row with **Undo**; **Prioritize** turns purple. The Approve button counts everyone not marked Not a Fit.
+- **Not a fit feedback** (Figma 15343:68271): Not a fit opens a blurred "Help us improve your matches" modal with the creator and a "Tell us why..." field. **Send** (enabled once something is typed) marks them Not a fit; **Cancel**, ✕, Esc or the backdrop backs out and keeps them. Undo on a Not a fit row needs no modal.
 - **Invite summary** (Figma 15341:25253): **Approve N creators** opens a read-only "Ready to send N invites?" pop-up: Prioritized (invited first), everyone else, and Not a fit, each with faces. **Go back** (or Esc / backdrop) keeps every selection; **Send** shows a confirmation in place and the footer turns into "N invites sent". Add `?sendfail=1` to try the failed-send state.
 - Everything runs on a fake in-memory backend (`mock-api.js`) and resets on reload.
 

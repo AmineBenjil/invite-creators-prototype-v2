@@ -100,8 +100,12 @@ const mockApi = (() => {
     else { console.log('[mock api] send invites', ids); resolve({ sent: ids.length }); }
   }, 700));
 
+  // Why a creator isn't a fit; feeds the recommendations
+  const notFitFeedback = (id, text) => { console.log('[mock api] not a fit feedback', id, text); return Promise.resolve(); };
+
   return {
     sendInvites,
+    notFitFeedback,
     groups: () => groups.map(clone),
     get: id => ({ ...find(id) }),
     // Creators still headed for approval: everyone minus the ones marked Not a Fit

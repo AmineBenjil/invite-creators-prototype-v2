@@ -212,13 +212,20 @@ document.querySelectorAll('.groups').forEach(list => list.addEventListener('clic
       b.classList.toggle('prio-on', on);
       b.setAttribute('aria-pressed', on);
     });
+  } else if (act === 'notfit') {
+    openFit(id, btn);   // ask why first; Send confirms the Not a fit
   } else {
-    api.setNotFit(id, act === 'notfit');
-    copies.forEach(el => setItem(el, api.get(id)));
-    renderCount();
-    decks.forEach(d => d.sync());
+    setNotFit(id, false);
   }
 }));
+
+// Applies a Not a fit (or its Undo) everywhere the creator is shown
+function setNotFit(id, on) {
+  api.setNotFit(id, on);
+  document.querySelectorAll(`.nc[data-id="${id}"]`).forEach(el => setItem(el, api.get(id)));
+  renderCount();
+  decks.forEach(d => d.sync());
+}
 
 // White background + stroke only once a heading is actually pinned to the top
 document.querySelectorAll('.modal').forEach(modal => {
@@ -445,7 +452,12 @@ document.querySelectorAll('.m-close').forEach(b => b.addEventListener('click', (
 overlay.addEventListener('click', () => setOpen(false));
 $('openModal').addEventListener('click', () => setOpen(true));
 document.querySelectorAll('.approve-btn').forEach(b => b.addEventListener('click', () => openSummary(b)));
-document.addEventListener('keydown', e => { if (e.key === 'Escape') (summaryOpen() ? closeSummary() : setOpen(false)); });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (fitOpen()) closeFit();
+  else if (summaryOpen()) closeSummary();
+  else setOpen(false);
+});
 
 // ---------- Invite summary pop-up ("Ready to send N invites?") ----------
 // Read-only: summarizes who gets invited, in what order, and who doesn't. Go back keeps every selection.
@@ -488,6 +500,17 @@ const rowHtml2 = (kind, title, sub, people, r) => `
     </span>
   </li>`;
 
+// "We'll invite 75 creators to this campaign, including 18 previously approved and 57 new."
+// When everyone left is in one group, name it instead: "We'll invite 56 new creators to this campaign."
+function inviteLine(d) {
+  const kept = [...d.prio, ...d.rest];
+  const prev = kept.filter(c => c.source === 'approved').length;
+  const fresh = kept.length - prev;
+  const who = n => plural(n, 'creator', 'creators');
+  if (!prev || !fresh) return `We'll invite ${kept.length} ${prev ? 'previously approved' : 'new'} ${who(kept.length).replace(/^\d+ /, '')} to this campaign.`;
+  return `We'll invite ${who(kept.length)} to this campaign, including ${prev} previously approved and ${fresh} new.`;
+}
+
 function summaryHtml(d, error) {
   const n = d.prio.length + d.rest.length;
   const parts = [d.prev && `${d.prev} you've worked with`, d.fresh && `${d.fresh} new`].filter(Boolean);
@@ -501,9 +524,8 @@ function summaryHtml(d, error) {
   <div class="sum-view">
     <div class="sum-top">
       <div class="sum-head">
-        <h2 class="sum-title" id="sumTitle">${n ? `Ready to send ${invites(n)}?` : 'Nobody to invite yet'}</h2>
-        <p class="sum-sub">${n ? "Here's who hears from us, and in what order. Need a change? Go back and edit your list."
-                              : 'You marked everyone as Not a fit. Go back and keep at least one creator.'}</p>
+        <h2 class="sum-title" id="sumTitle">${n ? 'Good to go?' : 'Nobody to invite yet'}</h2>
+        <p class="sum-sub">${n ? inviteLine(d) : 'You marked everyone as Not a fit. Go back and keep at least one creator.'}</p>
       </div>
       <ul class="sum-rows">${rows.map((row, i) => rowHtml2(...row, i)).join('')}</ul>
     </div>
@@ -600,6 +622,61 @@ sum.addEventListener('keydown', e => {
   const i = btns.indexOf(document.activeElement);
   e.preventDefault();
   btns[(i + (e.shiftKey ? -1 : 1) + btns.length) % btns.length].focus();
+});
+
+// ---------- Not a fit feedback modal (Figma 15343:68271) ----------
+// Not a fit asks why first. Send marks the creator Not a fit and keeps the note; Cancel backs out.
+const fit = $('fit');
+const fitDlg = fit.querySelector('.fit-dlg');
+const fitInput = $('fitWhy');
+const fitSend = fitDlg.querySelector('[data-fit=send]');
+let fitId = null, fitOpener = null, fitCloseT;
+const fitOpen = () => !fit.hidden;
+
+function openFit(id, opener) {
+  const c = api.get(id);
+  fitId = id;
+  fitOpener = opener;
+  fitDlg.querySelector('.fit-av img').src = `assets/${c.avatar}.jpg`;
+  fitDlg.querySelector('.fit-name').textContent = c.name;
+  fitDlg.querySelector('.fit-handle').textContent = c.handle;
+  fitInput.value = '';
+  fitSend.disabled = true;
+  clearTimeout(fitCloseT);
+  fit.hidden = false;
+  void fit.offsetWidth;   // start from the hidden pose so the enter transition runs
+  fit.classList.add('in');
+  fitInput.focus();
+}
+
+function closeFit(confirmed) {
+  if (!fitOpen()) return;
+  const id = fitId, opener = fitOpener;
+  fit.classList.remove('in');
+  clearTimeout(fitCloseT);
+  fitCloseT = setTimeout(() => { fit.hidden = true; }, 260);
+  if (confirmed) {
+    api.notFitFeedback(id, fitInput.value.trim());
+    setTimeout(() => setNotFit(id, true), 200);   // collapse the card once the blur lifts
+  } else if (opener && opener.isConnected) {
+    opener.focus();
+  }
+}
+
+fitInput.addEventListener('input', () => { fitSend.disabled = !fitInput.value.trim(); });
+fit.addEventListener('click', e => {
+  if (e.target === fit) return closeFit();   // backdrop = Cancel
+  const act = e.target.closest('[data-fit]')?.dataset.fit;
+  if (act === 'cancel') closeFit();
+  else if (act === 'send' && !fitSend.disabled) closeFit(true);
+});
+// Keep Tab inside the dialog
+fit.addEventListener('keydown', e => {
+  if (e.key !== 'Tab') return;
+  const els = [...fitDlg.querySelectorAll('button:not(:disabled), textarea')];
+  const i = els.indexOf(document.activeElement);
+  e.preventDefault();
+  els[(i + (e.shiftKey ? -1 : 1) + els.length) % els.length].focus();
 });
 
 // ---------- Prototype version switch (V1 / V2 / V3), remembered per browser ----------

@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=64">
+  <link rel="stylesheet" href="styles.css?v=69">
 </head>
 <body>
   <!-- ===== Background page ===== -->
@@ -75,7 +75,7 @@
     </div>
 
     <div class="m-foot">
-      <p class="m-warn" role="status">About half of creators accept, so keep at least 50 for your 25 spots.</p>
+      <p class="m-warn" role="status">Approve at least 50 creators for your 25 spots, since about 50% accept invites.</p>
       <button class="approve-btn"><span>Approve <span class="js-approve">75</span> creators</span><img src="assets/arrow-right-16.svg" alt="" width="16" height="16"></button>
     </div>
   </div>
@@ -96,7 +96,7 @@
     </div>
 
     <div class="m-foot">
-      <p class="m-warn" role="status">About half of creators accept, so keep at least 50 for your 25 spots.</p>
+      <p class="m-warn" role="status">Approve at least 50 creators for your 25 spots, since about 50% accept invites.</p>
       <button class="approve-btn"><span>Approve <span class="js-approve">75</span> creators</span><img src="assets/arrow-right-16.svg" alt="" width="16" height="16"></button>
     </div>
   </div>
@@ -117,7 +117,7 @@
     </div>
 
     <div class="m-foot">
-      <p class="m-warn" role="status">About half of creators accept, so keep at least 50 for your 25 spots.</p>
+      <p class="m-warn" role="status">Approve at least 50 creators for your 25 spots, since about 50% accept invites.</p>
       <button class="approve-btn"><span>Approve <span class="js-approve">75</span> creators</span><img src="assets/arrow-right-16.svg" alt="" width="16" height="16"></button>
     </div>
   </div>
@@ -125,6 +125,31 @@
   <!-- ===== Invite summary pop-up (Figma 15341:25253, read-only) ===== -->
   <div class="sum" id="sum" hidden>
     <div class="sum-dlg" role="dialog" aria-modal="true" aria-labelledby="sumTitle"></div>
+  </div>
+
+  <!-- ===== Not a fit feedback (Figma 15343:68271) ===== -->
+  <div class="sum fit" id="fit" hidden>
+    <div class="fit-dlg" role="dialog" aria-modal="true" aria-labelledby="fitTitle">
+      <button class="fit-close" data-fit="cancel" aria-label="Close"><img src="assets/close-16.svg" alt="" width="16" height="16"></button>
+      <div class="fit-body">
+        <div class="fit-who">
+          <span class="fit-av"><img src="" alt=""></span>
+          <div class="fit-id">
+            <p class="fit-name-row"><span class="fit-spacer"></span><span class="fit-name"></span><img src="assets/card-verified-16.svg" alt="" width="16" height="16"></p>
+            <p class="fit-handle"></p>
+          </div>
+        </div>
+        <div class="fit-text">
+          <h2 class="fit-title" id="fitTitle">Help us improve your matches</h2>
+          <p class="fit-sub">Your feedback trains our recommendations so we surface better creators for you.</p>
+        </div>
+        <textarea class="fit-input" id="fitWhy" placeholder="Tell us why..." aria-label="Why isn't this creator a fit?"></textarea>
+      </div>
+      <div class="fit-foot">
+        <button class="fit-send" data-fit="send" disabled>Send</button>
+        <button class="fit-cancel" data-fit="cancel">Cancel</button>
+      </div>
+    </div>
   </div>
 
   <!-- ===== Prototype version switch ===== -->
@@ -135,7 +160,7 @@
     <button class="ver-opt" role="radio" data-ver="v3">V3</button>
   </div>
 
-  <script src="mock-api.js?v=64"></script>
-  <script src="app.js?v=64"></script>
+  <script src="mock-api.js?v=69"></script>
+  <script src="app.js?v=69"></script>
 </body>
 </html>
