@@ -274,11 +274,10 @@ const deckHtml = g => {
   </section>`;
 };
 
-const v3 = $('modal-v3');
-const v3Body = v3.querySelector('.m-body');
-v3.querySelector('.groups').innerHTML = groups.map(deckHtml).join('');
+// V3 and V4 share this deck; V4 is the same thing with the stacked card edges turned off
+document.querySelectorAll('.modal.v3 .groups').forEach(el => { el.innerHTML = groups.map(deckHtml).join(''); });
 
-function makeDeck(sec, g) {
+function makeDeck(sec, g, v3Body, stack) {
   const deck = sec.querySelector('.deck'), bar = deck.querySelector('.known');
   const clip = deck.querySelector('.clip'), list = deck.querySelector('.list');
   const head = sec.querySelector('.g-head'), collapseBtn = sec.querySelector('.g-collapse');
@@ -288,7 +287,7 @@ function makeDeck(sec, g) {
   // bleed through the bar's half-pixel edge. Every measure below is from the clip's top.
   const INSET = 2;
   const barH = () => bar.offsetHeight - INSET;
-  const closedH = () => barH() + 16;   // +16 leaves room for the two peeking card edges
+  const closedH = () => barH() + (stack ? 16 : 0);   // +16 leaves room for the two peeking card edges
   // Extra clip room so card shadows (0 4px 24px) aren't sliced off; a matching negative margin keeps layout unchanged
   const SHADOW = 28;
   const clipClosed = () => closedH() + SHADOW;
@@ -311,10 +310,13 @@ function makeDeck(sec, g) {
     list.style.paddingBottom = 12 + SHADOW + 'px';
   }
 
-  // Closed rest pose: bottom-aligned just under the bar, the first two peeking out as stack edges
+  // Closed rest pose: bottom-aligned just under the bar, the first two peeking out as stack edges.
+  // Without the stack (V4) every card hides fully behind the bar.
   function pose(el, i) {
+    const bottom = el.offsetTop + el.offsetHeight;
+    if (!stack) return { transform: `translateY(${barH() - bottom}px) scale(.96)`, opacity: 0 };
     const edge = i === 0 ? 8 : 15, sc = i === 0 ? .965 : .93;
-    return { transform: `translateY(${barH() + edge - (el.offsetTop + el.offsetHeight)}px) scale(${sc})`, opacity: i < 2 ? 1 : 0 };
+    return { transform: `translateY(${barH() + edge - bottom}px) scale(${sc})`, opacity: i < 2 ? 1 : 0 };
   }
 
   function restClosed() {
@@ -433,14 +435,20 @@ function makeDeck(sec, g) {
   };
 }
 
-const decks = [...v3.querySelectorAll('.group')].map((sec, i) => makeDeck(sec, groups[i]));
-let relayoutT;
-new ResizeObserver(() => { clearTimeout(relayoutT); relayoutT = setTimeout(() => decks.forEach(d => d.relayout()), 80); }).observe(v3Body);
+const decks = [];
+document.querySelectorAll('.modal.v3').forEach(modal => {
+  const body = modal.querySelector('.m-body');
+  const stack = !modal.classList.contains('v4');
+  const own = [...modal.querySelectorAll('.group')].map((sec, i) => makeDeck(sec, groups[i], body, stack));
+  decks.push(...own);
+  let relayoutT;
+  new ResizeObserver(() => { clearTimeout(relayoutT); relayoutT = setTimeout(() => own.forEach(d => d.relayout()), 80); }).observe(body);
+});
 document.fonts && document.fonts.ready.then(() => decks.forEach(d => d.relayout()));
 
 // ---------- Modal open / close (shows the selected version's popup) ----------
 const overlay = $('overlay');
-const modals = { v1: $('modal-v1'), v2: $('modal-v2'), v3: $('modal-v3') };
+const modals = { v1: $('modal-v1'), v2: $('modal-v2'), v3: $('modal-v3'), v4: $('modal-v4') };
 let version = 'v2';
 let isOpen = true;
 const setOpen = open => {
@@ -732,7 +740,7 @@ fit.addEventListener('keydown', e => {
 
 // ---------- Prototype version switch (V1 / V2 / V3), remembered per browser ----------
 try { version = localStorage.getItem('invite-version') || 'v2'; } catch {}
-const hashVersion = location.hash.match(/v[123]/);   // #v1 / #v2 / #v3 pick a version
+const hashVersion = location.hash.match(/v[1234]/);   // #v1 … #v4 pick a version
 if (hashVersion) version = hashVersion[0];
 function setVersion(v) {
   version = v;

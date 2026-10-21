@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=72">
+  <link rel="stylesheet" href="styles.css?v=73">
 </head>
 <body>
   <!-- ===== Background page ===== -->
@@ -122,6 +122,27 @@
     </div>
   </div>
 
+  <!-- V4: V3 without the stacked card edges; opening and closing work exactly the same -->
+  <div class="modal v3 v4" id="modal-v4" role="dialog" aria-label="Invite Creators" hidden>
+    <div class="m-head">
+      <p class="m-title">Invite Creators</p>
+      <button class="m-close" aria-label="Close"><img src="assets/close-16.svg" alt="" width="16" height="16"></button>
+    </div>
+
+    <div class="m-body">
+      <div class="m-intro">
+        <p class="m-headline">Great news, we've selected <span class="js-total">75</span> creators for your campaign.</p>
+        <p class="m-lede">Remove anyone who isn't a fit, or prioritize who gets invited first. The more creators you approve, the better we can fill your campaign.</p>
+      </div>
+      <div class="groups"></div>
+    </div>
+
+    <div class="m-foot">
+      <p class="m-warn" role="status">Approve at least 50 creators for your 25 spots, since about 50% accept invites.</p>
+      <button class="approve-btn"><span>Approve <span class="js-approve">75</span> creators</span><img src="assets/arrow-right-16.svg" alt="" width="16" height="16"></button>
+    </div>
+  </div>
+
   <!-- ===== Invite summary pop-up (Figma 15341:25253, read-only) ===== -->
   <div class="sum" id="sum" hidden>
     <div class="sum-dlg" role="dialog" aria-modal="true" aria-labelledby="sumTitle"></div>
@@ -158,9 +179,10 @@
     <button class="ver-opt" role="radio" data-ver="v1">V1</button>
     <button class="ver-opt" role="radio" data-ver="v2">V2</button>
     <button class="ver-opt" role="radio" data-ver="v3">V3</button>
+    <button class="ver-opt" role="radio" data-ver="v4">V4</button>
   </div>
 
-  <script src="mock-api.js?v=72"></script>
-  <script src="app.js?v=72"></script>
+  <script src="mock-api.js?v=73"></script>
+  <script src="app.js?v=73"></script>
 </body>
 </html>

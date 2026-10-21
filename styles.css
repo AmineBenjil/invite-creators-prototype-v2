@@ -538,8 +538,9 @@ img { display: block; max-width: none; }
   display: flex; padding: 4px; border-radius: 100px;
   background: rgba(28,28,28,.92); box-shadow: 0 8px 24px rgba(0,0,0,.24); backdrop-filter: blur(8px);
 }
-.ver-thumb { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / 3); border-radius: 100px; background: #fff; transition: transform .35s cubic-bezier(.22,1,.36,1); }
+.ver-thumb { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / 4); border-radius: 100px; background: #fff; transition: transform .35s cubic-bezier(.22,1,.36,1); }
 .ver[data-on="v2"] .ver-thumb { transform: translateX(100%); }
 .ver[data-on="v3"] .ver-thumb { transform: translateX(200%); }
+.ver[data-on="v4"] .ver-thumb { transform: translateX(300%); }
 .ver-opt { position: relative; z-index: 1; width: 72px; padding: 7px 0; font-size: 13px; font-weight: 600; color: #fff; text-align: center; transition: color .25s; }
 .ver-opt[aria-checked="true"] { color: #1c1c1c; }
