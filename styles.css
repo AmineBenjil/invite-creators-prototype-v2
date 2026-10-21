@@ -455,13 +455,29 @@ img { display: block; max-width: none; }
 .sum-send:active { transform: scale(.98); }
 .sum-send:disabled { opacity: .4; pointer-events: none; }
 
-/* Confirmation view, swapped in place after Send */
-.sum-done { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 24px 8px 8px; text-align: center; }
-.sum-done-mark { width: 40px; height: 40px; border-radius: 100px; background: #f0ecff; display: flex; align-items: center; justify-content: center; animation: sum-pop .5s var(--ease) both; }
-@keyframes sum-pop { from { opacity: 0; transform: scale(.4); } }
-.sum-done-title { font-size: 20px; font-weight: 600; line-height: normal; color: #222; }
-.sum-done-body { max-width: 360px; font-size: 14px; line-height: 1.5; color: #717171; }
-.sum-done .sum-foot { align-self: stretch; justify-content: center; margin-top: 8px; }
+/* Confirmation view, swapped in place after Send: disc pops, check draws, ring pulses, then the text rises in */
+.sum-done { display: flex; flex-direction: column; align-items: center; padding: 32px 8px 8px; text-align: center; }
+.done-check { position: relative; width: 64px; height: 64px; margin-bottom: 24px; }
+.done-check svg { position: relative; display: block; overflow: visible; }
+.done-disc { fill: #10b981; transform-origin: 32px 32px; animation: done-pop .55s cubic-bezier(.34, 1.56, .64, 1) .08s both; }
+.done-tick { stroke-dasharray: 36; stroke-dashoffset: 36; animation: done-draw .38s cubic-bezier(.65, 0, .35, 1) .38s forwards; }
+.done-ring { position: absolute; inset: 0; border-radius: 100px; background: #10b981; opacity: 0; animation: done-ring .9s cubic-bezier(.22, 1, .36, 1) .3s; }
+@keyframes done-pop { from { transform: scale(0); } }
+@keyframes done-draw { to { stroke-dashoffset: 0; } }
+@keyframes done-ring { from { opacity: .35; transform: scale(1); } to { opacity: 0; transform: scale(1.9); } }
+.sum-done-title { font-size: 24px; font-weight: 700; line-height: 1.25; color: #222; letter-spacing: -0.2px; animation: done-rise .5s var(--ease) .45s both; }
+.sum-done-body { max-width: 400px; margin-top: 10px; font-size: 15px; line-height: 1.5; color: #717171; text-wrap: balance; animation: done-rise .5s var(--ease) .52s both; }
+.done-btn {
+  min-width: 160px; height: 48px; margin-top: 32px; padding: 0 28px; border-radius: 100px;
+  background: #fff; border: 1px solid #e3e3e3; box-shadow: 0 1px 2px rgba(0,0,0,.04);
+  font-size: 15px; font-weight: 600; color: #1c1c1c; text-align: center;
+  transition: background .15s, border-color .15s, transform .1s;
+  animation: done-rise .5s var(--ease) .6s both;
+}
+.done-btn:hover { background: #f7f7f7; border-color: #d5d5d5; }
+.done-btn:active { transform: scale(.98); }
+@keyframes done-rise { from { opacity: 0; transform: translateY(8px); } }
+.confetti { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 160; pointer-events: none; }
 
 .approve-btn:disabled { opacity: .5; cursor: default; }
 
@@ -471,7 +487,8 @@ img { display: block; max-width: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .sum, .sum-dlg, .sum-view { transition-duration: 1ms !important; }
-  .sum-row, .sum-done-mark { animation: none !important; }
+  .sum-row, .done-disc, .done-ring, .sum-done-title, .sum-done-body, .done-btn { animation: none !important; }
+  .done-tick { animation: none !important; stroke-dashoffset: 0; }
 }
 
 /* ===== Not a fit feedback (Figma 15343:68271); shares the summary's blurred backdrop ===== */

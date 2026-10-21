@@ -537,22 +537,66 @@ function summaryHtml(d, error) {
   </div>`;
 }
 
-function doneHtml(n, prio) {
-  const first = prio ? (prio === 1 ? 'Your 1 prioritized creator hears from us first. ' : `Your ${prio} prioritized creators hear from us first. `) : '';
+function doneHtml(n) {
   return `
   <div class="sum-view">
     <div class="sum-done">
-      <span class="sum-done-mark"><img src="assets/card-bullet-16.svg" alt="" width="16" height="16"></span>
-      <h2 class="sum-done-title" id="sumTitle">${invites(n)} on the way</h2>
-      <p class="sum-done-body">${first}We'll email you as creators accept, and handle the follow-ups for anyone who's slow to reply.</p>
-      <div class="sum-foot"><button class="sum-send" data-sum="close">Back to campaign</button></div>
+      <span class="done-check" aria-hidden="true">
+        <span class="done-ring"></span>
+        <svg width="64" height="64" viewBox="0 0 64 64"><circle class="done-disc" cx="32" cy="32" r="32"/><path class="done-tick" d="M21 33.5l7.5 7.5L43.5 25" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <h2 class="sum-done-title" id="sumTitle">${plural(n, 'creator', 'creators')} approved</h2>
+      <p class="sum-done-body">Invites are going out now. Most creators answer within a few days, some take up to 3 business days.</p>
+      <button class="done-btn" data-sum="close">Done</button>
     </div>
   </div>`;
 }
 
+// A short confetti burst from a point, in brand colors. Canvas-only, removed when the last piece settles.
+function confetti(x, y) {
+  if (reduceMotion) return;
+  const cv = document.createElement('canvas');
+  const dpr = window.devicePixelRatio || 1;
+  cv.className = 'confetti';
+  cv.width = innerWidth * dpr; cv.height = innerHeight * dpr;
+  document.body.appendChild(cv);
+  const ctx = cv.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const colors = ['#7a5cfa', '#a48bff', '#c9bdfd', '#cdff5a', '#ffb547', '#ff7eb6'];
+  const bits = Array.from({ length: 110 }, () => {
+    const a = -Math.PI / 2 + (Math.random() - .5) * Math.PI * 1.1;   // mostly upward, fanned out
+    const v = 6 + Math.random() * 9;
+    return {
+      x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v,
+      w: 5 + Math.random() * 5, h: 8 + Math.random() * 6,
+      r: Math.random() * Math.PI, vr: (Math.random() - .5) * .4,
+      flip: Math.random() * Math.PI, vf: .1 + Math.random() * .2,
+      c: colors[(Math.random() * colors.length) | 0], round: Math.random() < .3,
+    };
+  });
+  const start = performance.now(), LIFE = 2200;
+  setTimeout(() => cv.remove(), LIFE + 400);   // safety net if frames are paused (background tab)
+  (function frame(now) {
+    const t = now - start;
+    ctx.clearRect(0, 0, innerWidth, innerHeight);
+    ctx.globalAlpha = Math.max(0, 1 - Math.max(0, t - LIFE * .6) / (LIFE * .4));   // fade out over the last 40%
+    bits.forEach(b => {
+      b.vx *= .985; b.vy = b.vy * .985 + .32;   // air drag + gravity
+      b.x += b.vx; b.y += b.vy; b.r += b.vr; b.flip += b.vf;
+      ctx.save();
+      ctx.translate(b.x, b.y); ctx.rotate(b.r); ctx.scale(1, Math.cos(b.flip));   // tumble
+      ctx.fillStyle = b.c;
+      if (b.round) { ctx.beginPath(); ctx.arc(0, 0, b.w / 2, 0, Math.PI * 2); ctx.fill(); }
+      else ctx.fillRect(-b.w / 2, -b.h / 2, b.w, b.h);
+      ctx.restore();
+    });
+    if (t < LIFE) requestAnimationFrame(frame); else cv.remove();
+  })(start);
+}
+
 function focusPrimary() {
-  const send = sumDlg.querySelector('.sum-send:not(:disabled)');
-  (send || sumDlg.querySelector('.sum-back')).focus();
+  const el = sumDlg.querySelector('.done-btn, .sum-send:not(:disabled)') || sumDlg.querySelector('.sum-back');
+  if (el) el.focus({ preventScroll: true });
 }
 
 function openSummary(opener) {
@@ -605,7 +649,14 @@ async function sendInvites(btn) {
     b.disabled = true;
     b.innerHTML = `<span>${invites(ids.length)} sent</span>`;
   });
-  swapView(doneHtml(ids.length, d.prio.length));
+  swapView(doneHtml(ids.length));
+  // Burst from the check as it lands (the view swaps in after 140ms; the disc pops at ~120ms into that)
+  setTimeout(() => {
+    const mark = sumDlg.querySelector('.done-check');
+    if (!mark) return;
+    const r = mark.getBoundingClientRect();
+    confetti(r.left + r.width / 2, r.top + r.height / 2);
+  }, 140 + 260);
 }
 
 sum.addEventListener('click', e => {
