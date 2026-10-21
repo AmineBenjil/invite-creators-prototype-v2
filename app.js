@@ -60,7 +60,7 @@ const cardHtml = c => `
     <button class="c-btn${c.priority ? ' prio-on' : ''}" data-act="prio" aria-pressed="${c.priority}">
       <img class="off" src="assets/prioritize-16.svg" alt="" width="16" height="16">
       <img class="on" src="assets/prioritize-16-purple.svg" alt="" width="16" height="16">
-      Prioritize
+      <span class="off">Prioritize</span><span class="on">Prioritized</span>
       <span class="tip" role="tooltip">Prioritized creators get their invite first.</span>
     </button>
   </div>`;

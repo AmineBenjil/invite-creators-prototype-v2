@@ -143,6 +143,13 @@ img { display: block; max-width: none; }
 .g-panel { display: none; padding: 0 15.5px 16px; flex-direction: column; gap: 16px; }
 .group.open .g-panel { display: flex; }
 
+/* Hover: the bar darkens a touch and the chevron gets a round background, like the Hide pill */
+.g-bar, .known { transition: background .15s; }
+.g-chev { transition: background .15s; }
+.g-bar:hover { background: #f1f1f1; }                     /* V2: bar sits on the #f8f8f8 box */
+.v1 .g-bar:hover, .v3 .known:hover { background: #fafafa; }   /* V1 / V3: white bar */
+.g-bar:hover .g-chev, .known:hover .g-chev { background: #ececec; }
+
 /* Creator card (Figma 15313:23513) */
 .nc { position: relative; flex-shrink: 0; background: #fff; border: 0.5px solid #e3e3e3; border-radius: 16px; overflow: hidden; }
 .nc.card { height: 491px; box-shadow: 0 4px 24px 0 rgba(0,0,0,0.08); }
@@ -221,7 +228,7 @@ img { display: block; max-width: none; }
 }
 .c-btn .on { display: none; }
 .c-btn.prio-on { color: #7a5cfa; }
-.c-btn.prio-on .on { display: block; }
+.c-btn.prio-on .on { display: block; }   /* icon turns purple, label reads "Prioritized" */
 .c-btn.prio-on .off { display: none; }
 
 /* Previously approved card (Figma 15318:24688): same card, own spacing plus the history tag */
