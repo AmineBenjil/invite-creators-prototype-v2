@@ -4,12 +4,12 @@ Clickable HTML/CSS/JS prototype of Benable's **Invite Creators** modal, built fr
 
 A copy of [invite-creators-prototype](https://github.com/AmineBenjil/invite-creators-prototype) for new explorations. Live: https://invite-creators-prototype-v2.vercel.app
 
-- **Suggestions deck:** swipe through suggested creators (‹ ›, Add, ⚡ priority invite, Not a Fit). Added creators fly into the shortlist panel and leave the deck.
-- **Creators you know:** the "8 creators on your list" bar opens an editor. A pill at the top of the page switches between three versions to A/B test:
-  - **V1 — Inline edit:** the bar expands into a swipeable card deck.
-  - **V2 — Edit popup:** a popup table; changes apply on Save.
-  - **V3 — Inline table:** the bar expands into a table.
-- **Shortlist panel:** "We added for you" (split into Priority and Standard), then Priority and Invites for new creators, newest first. Hover a normal invite to make it a priority invite.
+- **Version switch:** a pill at the top of the page picks the popup version (remembered per browser; `#v1` / `#v2` / `#v3` in the URL also work). 
+- **V3** (deck expand): each group's bar is the top card of a deck. Closed, two card edges peek out under it; opening spreads the cards out from under the bar while the avatar pile slides away to the left, and closing tucks them back. A "Collapse" button appears in the pinned heading once the bar scrolls away.
+- **V1** (Figma 15309:22677): the same approve popup, but opening a group drops its avatar bar and lists the cards inline at full width, with a "Hide …" link next to the heading to collapse it again. Not a Fit and Prioritize choices are shared across all three versions.
+- **V2: Approve creators popup** (Figma 15308:18705): we've picked 75 creators, split into **Previously approved creators** (18) and **New creators** (57). Each group is a collapsed bar (avatar stack, names, chevron).
+- **Previously approved dropdown** (Figma 15314:50788): opens into 18 cards with a "Previously approved" tag and what happened last time.
+- **New creators dropdown** (Figma 15313:23476): opens into 57 creator cards. In both lists, **Not a Fit** collapses a card in place into a one-line row with **Undo**; **Prioritize** turns purple. The Approve button counts everyone not marked Not a Fit.
 - Everything runs on a fake in-memory backend (`mock-api.js`) and resets on reload.
 
 ## Run it
@@ -17,7 +17,7 @@ A copy of [invite-creators-prototype](https://github.com/AmineBenjil/invite-crea
 No build step. Serve the folder with any static server, for example:
 
 ```bash
-python3 -m http.server 5173
+python3 -m http.server 5180
 ```
 
-Then open http://localhost:5173 (add `#v2` or `#v3` to start on that version).
+Then open http://localhost:5180.
