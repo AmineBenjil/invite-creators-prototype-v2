@@ -101,7 +101,7 @@ const mockApi = (() => {
   }, 700));
 
   // Why a creator isn't a fit; feeds the recommendations
-  const notFitFeedback = (id, text) => { console.log('[mock api] not a fit feedback', id, text); return Promise.resolve(); };
+  const notFitFeedback = (id, text) => { find(id).feedback = text; console.log('[mock api] not a fit feedback', id, text); return Promise.resolve(); };
 
   return {
     sendInvites,

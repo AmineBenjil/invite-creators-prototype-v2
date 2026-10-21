@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=73">
+  <link rel="stylesheet" href="styles.css?v=79">
 </head>
 <body>
   <!-- ===== Background page ===== -->
@@ -55,6 +55,12 @@
       <span class="tab" style="width:77.719px">Content</span>
     </div>
   </header>
+
+  <!-- Shown on the dashboard once invites are sent -->
+  <div class="sent-banner" id="sentBanner" hidden>
+    <p><b><span id="sentCount">75 creators</span> approved.</b> Invites are going out now.</p>
+    <button class="sent-view" id="viewList">View list</button>
+  </div>
 
   <!-- ===== Modals: one per prototype version ===== -->
   <div class="overlay" id="overlay"></div>
@@ -181,8 +187,17 @@
     <button class="ver-opt" role="radio" data-ver="v3">V3</button>
     <button class="ver-opt" role="radio" data-ver="v4">V4</button>
   </div>
+  <!-- V1 only: switch how Not a fit behaves -->
+  <div class="ver-sub" role="radiogroup" aria-label="V1 Not a fit behavior">
+    <span class="ver-sub-label">Not a fit</span>
+    <span class="ver-sub-seg">
+      <span class="ver-sub-thumb"></span>
+      <button class="ver-sub-opt" role="radio" data-mode="popup">Popup</button>
+      <button class="ver-sub-opt" role="radio" data-mode="inline">Inline</button>
+    </span>
+  </div>
 
-  <script src="mock-api.js?v=73"></script>
-  <script src="app.js?v=73"></script>
+  <script src="mock-api.js?v=79"></script>
+  <script src="app.js?v=79"></script>
 </body>
 </html>

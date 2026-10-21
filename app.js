@@ -68,7 +68,8 @@ const cardHtml = c => `
 const rowHtml = c => `
   <div class="r-who">
     <div class="r-av"><span><img src="assets/${c.avatar}.jpg" alt=""></span></div>
-    <p class="r-text"><span class="r-name">${c.name}</span><span class="r-tag">Not a Fit</span></p>
+    <p class="r-text"><span class="r-name">${c.name}</span><span class="r-tag">Not a Fit</span><span class="r-chip">Not a Fit</span>${
+      c.feedback ? '<span class="r-sent">Feedback sent</span>' : '<button class="r-why" data-act="why">Tell us why?</button>'}</p>
   </div>
   <button class="r-undo" data-act="undo">Undo</button>`;
 
@@ -213,7 +214,11 @@ document.querySelectorAll('.groups').forEach(list => list.addEventListener('clic
       b.setAttribute('aria-pressed', on);
     });
   } else if (act === 'notfit') {
-    openFit(id, btn);   // ask why first; Send confirms the Not a fit
+    // V1 can skip the popup: the card collapses right away and "Tell us why?" asks later
+    if (item.closest('.modal.v1') && notFitMode === 'inline') setNotFit(id, true);
+    else openFit(id);   // ask why first (optional), then collapse
+  } else if (act === 'why') {
+    openFit(id, true);   // already Not a fit: the popup only collects the reason
   } else {
     setNotFit(id, false);
   }
@@ -455,11 +460,19 @@ const setOpen = open => {
   isOpen = open;
   overlay.classList.toggle('hidden', !open);
   Object.entries(modals).forEach(([v, m]) => { m.hidden = !(open && v === version); });
+  // Leaving the success screen: it plays once, then the dashboard shows the "approved" card
+  if (!open && document.querySelector('.modal.is-done')) {
+    document.querySelectorAll('.modal.is-done').forEach(m => m.classList.remove('is-done'));
+    $('sentBanner').hidden = false;
+  }
 };
 document.querySelectorAll('.m-close').forEach(b => b.addEventListener('click', () => setOpen(false)));
 overlay.addEventListener('click', () => setOpen(false));
 $('openModal').addEventListener('click', () => setOpen(true));
 document.querySelectorAll('.approve-btn').forEach(b => b.addEventListener('click', () => openSummary(b)));
+// Done on the success screen closes the popup; View list on the dashboard card reopens it on the list
+document.addEventListener('click', e => { if (e.target.closest('.m-done .done-btn')) setOpen(false); });
+$('viewList').addEventListener('click', () => setOpen(true));
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   if (fitOpen()) closeFit();
@@ -625,19 +638,6 @@ function closeSummary() {
   if (sumOpener && !sumOpener.disabled) sumOpener.focus();
 }
 
-// Fade the dialog's contents out, swap the view, fade back in; the dialog itself stays open
-function swapView(html) {
-  const view = sumDlg.querySelector('.sum-view');
-  view.classList.add('out');
-  setTimeout(() => {
-    sumDlg.innerHTML = html;
-    const next = sumDlg.querySelector('.sum-view');
-    next.classList.add('out');
-    void next.offsetWidth;
-    next.classList.remove('out');
-    focusPrimary();
-  }, 140);
-}
 
 async function sendInvites(btn) {
   const d = summaryData();
@@ -657,14 +657,25 @@ async function sendInvites(btn) {
     b.disabled = true;
     b.innerHTML = `<span>${invites(ids.length)} sent</span>`;
   });
-  swapView(doneHtml(ids.length));
-  // Burst from the check as it lands (the view swaps in after 140ms; the disc pops at ~120ms into that)
+  // The summary closes and the big popup itself turns into the success screen
+  closeSummary();
+  setTimeout(() => showSuccess(ids.length), 180);
+}
+
+// Success screen inside the Invite Creators popup: the list and footer fade out, the check/confetti/text rise in
+function showSuccess(n) {
+  const modal = modals[version];
+  let done = modal.querySelector('.m-done');
+  if (!done) { done = document.createElement('div'); done.className = 'm-done'; modal.appendChild(done); }
+  done.innerHTML = doneHtml(n);
+  modal.classList.add('is-done');
+  done.querySelector('.done-btn').focus({ preventScroll: true });
+  $('sentCount').textContent = plural(n, 'creator', 'creators');
+  // Burst from the check as the disc lands
   setTimeout(() => {
-    const mark = sumDlg.querySelector('.done-check');
-    if (!mark) return;
-    const r = mark.getBoundingClientRect();
+    const r = done.querySelector('.done-check').getBoundingClientRect();
     confetti(r.left + r.width / 2, r.top + r.height / 2);
-  }, 140 + 260);
+  }, 380);
 }
 
 sum.addEventListener('click', e => {
@@ -684,18 +695,19 @@ sum.addEventListener('keydown', e => {
 });
 
 // ---------- Not a fit feedback modal (Figma 15343:68271) ----------
-// Not a fit asks why first. Send marks the creator Not a fit and keeps the note; Cancel backs out.
+// Not a fit asks why first; the reason is optional and the creator is marked Not a fit however the popup closes.
 const fit = $('fit');
 const fitDlg = fit.querySelector('.fit-dlg');
 const fitInput = $('fitWhy');
 const fitSend = fitDlg.querySelector('[data-fit=send]');
-let fitId = null, fitOpener = null, fitCloseT;
+let fitId = null, fitCloseT, fitReasonOnly = false;
 const fitOpen = () => !fit.hidden;
 
-function openFit(id, opener) {
+// reasonOnly: opened from "Tell us why?" on a row that's already Not a fit (V1 inline)
+function openFit(id, reasonOnly = false) {
   const c = api.get(id);
   fitId = id;
-  fitOpener = opener;
+  fitReasonOnly = reasonOnly;
   fitDlg.querySelector('.fit-av img').src = `assets/${c.avatar}.jpg`;
   fitDlg.querySelector('.fit-name').textContent = c.name;
   fitDlg.querySelector('.fit-handle').textContent = c.handle;
@@ -708,18 +720,18 @@ function openFit(id, opener) {
   fitInput.focus();
 }
 
-function closeFit(confirmed) {
+// Every way out (Send, Cancel, ✕, Esc, backdrop) marks the creator Not a fit; Send also keeps the reason.
+// Undo on the collapsed row is the way back.
+function closeFit(sent) {
   if (!fitOpen()) return;
-  const id = fitId, opener = fitOpener;
+  const id = fitId;
   fit.classList.remove('in');
   clearTimeout(fitCloseT);
   fitCloseT = setTimeout(() => { fit.hidden = true; }, 260);
-  if (confirmed) {
-    api.notFitFeedback(id, fitInput.value.trim());
-    setTimeout(() => setNotFit(id, true), 200);   // collapse the card once the blur lifts
-  } else if (opener && opener.isConnected) {
-    opener.focus();
-  }
+  if (sent) api.notFitFeedback(id, fitInput.value.trim());
+  if (!fitReasonOnly) setTimeout(() => setNotFit(id, true), 200);   // collapse the card once the blur lifts
+  else if (sent) document.querySelectorAll(`.nc.row[data-id="${id}"] .r-why`)
+    .forEach(b => { b.outerHTML = '<span class="r-sent">Feedback sent</span>'; });
 }
 
 fitInput.addEventListener('input', () => { fitSend.disabled = !fitInput.value.trim(); });
@@ -738,6 +750,20 @@ fit.addEventListener('keydown', e => {
   els[(i + (e.shiftKey ? -1 : 1) + els.length) % els.length].focus();
 });
 
+// ---------- V1 option: how Not a fit behaves (Popup asks why first, Inline collapses right away) ----------
+let notFitMode = 'popup';
+try { notFitMode = localStorage.getItem('v1-notfit') || 'popup'; } catch {}
+function setNotFitMode(m) {
+  notFitMode = m;
+  try { localStorage.setItem('v1-notfit', m); } catch {}
+  $('modal-v1').classList.toggle('fit-inline', m === 'inline');
+  const sub = document.querySelector('.ver-sub');
+  sub.dataset.on = m;
+  sub.querySelectorAll('.ver-sub-opt').forEach(b => b.setAttribute('aria-checked', b.dataset.mode === m));
+}
+document.querySelectorAll('.ver-sub-opt').forEach(b => b.addEventListener('click', () => setNotFitMode(b.dataset.mode)));
+setNotFitMode(notFitMode);
+
 // ---------- Prototype version switch (V1 / V2 / V3), remembered per browser ----------
 try { version = localStorage.getItem('invite-version') || 'v2'; } catch {}
 const hashVersion = location.hash.match(/v[1234]/);   // #v1 … #v4 pick a version
@@ -746,6 +772,7 @@ function setVersion(v) {
   version = v;
   try { localStorage.setItem('invite-version', v); } catch {}
   document.querySelector('.ver').dataset.on = v;
+  document.querySelector('.ver-sub').classList.toggle('show', v === 'v1');   // the Not a fit option only applies to V1
   document.querySelectorAll('.ver-opt').forEach(b => b.setAttribute('aria-checked', b.dataset.ver === v));
   setOpen(isOpen);
 }
