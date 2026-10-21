@@ -1,6 +1,8 @@
-# Invite Creators — prototype
+# Invite Creators — prototype (v2 copy)
 
 Clickable HTML/CSS/JS prototype of Benable's **Invite Creators** modal, built from the Figma designs.
+
+A copy of [invite-creators-prototype](https://github.com/AmineBenjil/invite-creators-prototype) for new explorations. Live: https://invite-creators-prototype-v2.vercel.app
 
 - **Suggestions deck:** swipe through suggested creators (‹ ›, Add, ⚡ priority invite, Not a Fit). Added creators fly into the shortlist panel and leave the deck.
 - **Creators you know:** the "8 creators on your list" bar opens an editor. A pill at the top of the page switches between three versions to A/B test:
