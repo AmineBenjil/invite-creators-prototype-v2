@@ -155,8 +155,10 @@ img { display: block; max-width: none; }
 .nc.card { height: 491px; box-shadow: 0 4px 24px 0 rgba(0,0,0,0.08); }
 .nc.row { height: 53px; }
 .nc.anim { transition: height .48s cubic-bezier(.4, 0, .2, 1), box-shadow .48s; }   /* SWAP_MS in app.js */
-.nc-out { opacity: 0; transition: opacity .16s ease-out; }   /* SWAP_OUT in app.js */
-.nc-in { animation: nc-fade .32s ease-out .12s both; }
+/* Card <-> row morph: the outgoing content dissolves in its own layer, kept at its old height so nothing reflows */
+.nc-old { position: absolute; left: 0; right: 0; top: 0; pointer-events: none; }
+.nc.morph .r-who, .nc.morph .r-undo { top: var(--mid); }   /* row content waits at its final spot while the slot shrinks */
+.g-panel.reveal > .nc.morph, .g-panel.reveal .nc.morph * { animation: none; }   /* a swap right after opening skips the entrance */
 @keyframes nc-fade { from { opacity: 0; } }
 
 .c-main { position: absolute; left: 20px; top: 20px; width: calc(100% - 39px);   /* 20px gutters measured from the outer edge, past the 0.5px borders */ display: flex; flex-direction: column; gap: 20px; }

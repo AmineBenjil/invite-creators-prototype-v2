@@ -75,36 +75,87 @@ const rowHtml = c => `
 
 const itemHtml = (c, i) => `<div class="nc ${c.notFit ? 'row' : 'card'}${c.source === 'approved' ? ' ap' : ''}" data-id="${c.id}" style="--i:${Math.min(i, REVEAL_CAP)}">${c.notFit ? rowHtml(c) : cardHtml(c)}</div>`;
 
-// Swap a card and its row in place, in two calm beats: the old content fades out where it is,
-// then the slot eases to its new height while the new content fades in. Nothing around it jumps.
-const SWAP_OUT = 160, SWAP_MS = 480;   // keep in step with .nc-out / .nc.anim in styles.css
-function setItem(el, c) {
-  clearTimeout(el._t); clearTimeout(el._t2);
-  el.classList.remove('anim');
+// Swap a card and its row in place as one morph: the avatar and name are the same person in both,
+// so they glide and resize from where they were to where they land (40px avatar to 28px, the name
+// shrinking into the small grey one). Everything else dissolves: the old parts fade out where they
+// are, the new ones fade in, while the slot eases to its new height. Undo plays it in reverse.
+const SWAP_MS = 480;   // keep in step with .nc.anim in styles.css
+const SWAP_EASE = 'cubic-bezier(.4, 0, .2, 1)';
+const AV = '.c-av, .r-av', NAME = '.c-name, .r-name';
+// The parts that only exist on one side: they dissolve in rather than move
+const ADDED = '.c-main > :not(.c-top), .c-foot, .c-social, .c-bio, .c-handle, .c-new, .c-name img, .r-tag, .r-chip, .r-why, .r-sent, .r-undo';
+
+// The name's text box (the card's name also holds the verified badge)
+function textRect(el) {
+  const r = document.createRange();
+  r.selectNodeContents(el.firstChild || el);
+  return r.getBoundingClientRect();
+}
+
+// FLIP: put `el` back where `from` was, then let it travel home. `scale` sizes it from its top-left.
+function morphFrom(el, from, to, scale, extra = {}) {
+  const dx = from.left - (to.left + (to.ox || 0) * scale), dy = from.top - (to.top + (to.oy || 0) * scale);
+  el.style.transformOrigin = '0 0';
+  el.animate([{ transform: `translate(${dx}px, ${dy}px) scale(${scale})`, ...extra.from },
+              { transform: 'none', ...extra.to }], { duration: SWAP_MS, easing: SWAP_EASE });
+}
+
+function finishSwap(el) {
+  clearTimeout(el._t);
+  el.querySelectorAll(':scope > .nc-old').forEach(n => n.remove());
+  el.getAnimations({ subtree: true }).forEach(a => a.cancel());
   el.style.height = '';
+  el.classList.remove('anim', 'morph');
+}
+
+function setItem(el, c) {
+  finishSwap(el);
   const swap = () => {
     el.innerHTML = c.notFit ? rowHtml(c) : cardHtml(c);
     el.classList.toggle('row', c.notFit);
     el.classList.toggle('card', !c.notFit);
   };
   if (reduceMotion || !el.offsetParent) { swap(); keepInView(el); return; }   // hidden versions just take the new state
+
+  // Before: where the avatar and name are now
   const from = el.offsetHeight;
+  const oAv = el.querySelector(AV), oName = el.querySelector(NAME);
+  const avFrom = oAv.getBoundingClientRect(), nameFrom = textRect(oName);
+  const nameStyle = getComputedStyle(oName), fromSize = parseFloat(nameStyle.fontSize), fromColor = nameStyle.color;
+
+  // The old content stays as a layer that dissolves; its avatar and name hand over to the new ones
+  const old = document.createElement('div');
+  old.className = 'nc-old';
+  old.style.height = from + 'px';
+  old.append(...el.childNodes);
+  old.querySelectorAll(AV + ', ' + NAME).forEach(n => { n.style.visibility = 'hidden'; });
+  swap();
+  const nAv = el.querySelector(AV), nName = el.querySelector(NAME);   // the new ones, before the old layer goes back in
+  el.prepend(old);
+
+  // After: lay the new content out at its final height, then pin the slot back to where it started
+  el.style.height = '';
+  const to = el.offsetHeight;
+  el.style.setProperty('--mid', to / 2 + 'px');   // the row content sits at its final spot while the slot shrinks
+  el.classList.add('morph');
   el.style.height = from + 'px';
-  el.querySelectorAll(':scope > *').forEach(n => n.classList.add('nc-out'));
-  el._t = setTimeout(() => {
-    swap();
-    el.style.height = '';
-    const to = el.offsetHeight;
-    el.style.height = from + 'px';
-    keepInView(el);
-    el.querySelectorAll(':scope > *').forEach(n => n.classList.add('nc-in'));
-    void el.offsetHeight;   // commit the start height before animating
-    el.classList.add('anim');
-    el.style.height = to + 'px';
-    const done = () => { clearTimeout(el._t2); el.style.height = ''; el.classList.remove('anim'); };
-    el._t2 = setTimeout(done, SWAP_MS + 80);   // fallback if transitionend never fires
-    el.ontransitionend = e => { if (e.propertyName === 'height') done(); };
-  }, SWAP_OUT);
+  keepInView(el);
+
+  const avTo = nAv.getBoundingClientRect();
+  const elTo = nName.getBoundingClientRect(), txtTo = textRect(nName);
+  const toStyle = getComputedStyle(nName);
+  morphFrom(nAv, avFrom, avTo, avFrom.width / avTo.width);
+  morphFrom(nName, nameFrom, { left: elTo.left, top: elTo.top, ox: txtTo.left - elTo.left, oy: txtTo.top - elTo.top },
+    fromSize / parseFloat(toStyle.fontSize), { from: { color: fromColor }, to: { color: toStyle.color } });
+
+  old.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: 'ease-out', fill: 'forwards' });
+  el.querySelectorAll(ADDED).forEach(n => n.closest('.nc-old') || n.animate([{ opacity: 0 }, { opacity: 1 }],
+    { duration: 260, delay: 180, easing: 'ease-out', fill: 'backwards' }));
+
+  void el.offsetHeight;   // commit the start height before animating
+  el.classList.add('anim');
+  el.style.height = to + 'px';
+  el._t = setTimeout(() => finishSwap(el), SWAP_MS + 80);
 }
 
 // A card collapsing from deep inside it would leave its row above the fold (or under the sticky heading):
@@ -488,7 +539,7 @@ function makeDeck(sec, g, v3Body, stack) {
   return {
     relayout() { if (!D.busy) (D.open ? restOpen() : restClosed()); },
     // A creator changed (here or in another version): refresh the labels, then re-pose once the row/card swap settles
-    sync() { labels(); clearTimeout(syncT); syncT = setTimeout(() => this.relayout(), SWAP_OUT + SWAP_MS + 40); },
+    sync() { labels(); clearTimeout(syncT); syncT = setTimeout(() => this.relayout(), SWAP_MS + 120); },
   };
 }
 
