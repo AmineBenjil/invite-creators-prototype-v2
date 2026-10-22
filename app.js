@@ -31,11 +31,11 @@ const cardHtml = c => `
       <ul>${c.fits.map(f => `<li><img src="assets/card-bullet-16.svg" alt="" width="16" height="16">${f}</li>`).join('')}</ul>
     </div>
     <div class="c-stats">
-      <div class="c-col" style="width:240px">
+      <div class="c-col c-soc">
         <p class="c-label">Social Stats</p>
-        <div class="c-box" style="width:240px">
-          <div class="c-stat" style="left:15.5px"><small>Followers</small><b>${c.followers}</b></div>
-          <div class="c-stat" style="left:124.33px">
+        <div class="c-box">
+          <div class="c-stat c-fol"><small>Followers</small><b>${c.followers}</b></div>
+          <div class="c-stat c-eng">
             <small>Engagement <img src="assets/card-info-12.svg" alt="" width="12" height="12"></small>
             <b><span class="c-ig12"><img src="assets/card-instagram-12.svg" alt="" width="13" height="13"></span>${c.engagement}</b>
           </div>
@@ -44,7 +44,7 @@ const cardHtml = c => `
       <div class="c-col c-aud">
         <p class="c-label">Audience</p>
         <div class="c-box">
-          <div class="c-stat" style="left:19.5px"><small>Location</small><b>${c.location}</b></div>
+          <div class="c-stat c-loc"><small>Location</small><b>${c.location}</b></div>
           <div class="c-stat mid c-age"><small>Age Range</small><b>${c.age}</b></div>
           <div class="c-stat mid c-gender"><small>Gender</small><b>${c.gender}</b></div>
         </div>
@@ -392,10 +392,27 @@ function makeDeck(sec, g, v3Body, stack) {
     if (D.busy || !D.open) return;
     D.busy = true;
     if (reduceMotion) { setOpenClasses(false); restClosed(); D.busy = false; return; }
-    // Bring the bar back into view first, so the cards have somewhere to go
     const br0 = bar.getBoundingClientRect(), bb = v3Body.getBoundingClientRect();
     const headH = head.offsetHeight;
-    if (br0.top < bb.top + headH - 20 || br0.top > bb.bottom - 120) {
+    const barAway = br0.top < bb.top + headH - 20 || br0.top > bb.bottom - 120;
+    // V4: collapsing from deep in the list doesn't scroll back up. The cards fade out where they are,
+    // the section snaps closed with its heading kept at the top, and the collapsed bar fades in.
+    if (!stack && barAway) {
+      await list.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: 'ease-out', fill: 'forwards' }).finished;
+      deck.style.setProperty('--d', '1ms');   // no bar morph while it's out of sight
+      setOpenClasses(false);
+      restClosed();
+      list.getAnimations().forEach(a => a.cancel());
+      v3Body.scrollTop += sec.getBoundingClientRect().top - v3Body.getBoundingClientRect().top;
+      checkBar();
+      await deck.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }],
+        { duration: 260, easing: EASE }).finished;
+      deck.style.setProperty('--d', '460ms');
+      D.busy = false;
+      return;
+    }
+    // Bring the bar back into view first, so the cards have somewhere to go
+    if (barAway) {
       const top = v3Body.scrollTop + br0.top - bb.top - headH - 8;
       await new Promise(res => {
         let done = false;

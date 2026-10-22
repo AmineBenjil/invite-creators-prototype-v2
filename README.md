@@ -6,7 +6,7 @@ A copy of [invite-creators-prototype](https://github.com/AmineBenjil/invite-crea
 
 - **Version switch:** a pill at the top of the page picks the popup version (remembered per browser; `#v1` to `#v4` in the URL also work). 
 - **V3** (deck expand): each group's bar is the top card of a deck. Closed, two card edges peek out under it; opening spreads the cards out from under the bar while the avatar pile slides away to the left, and closing tucks them back. A "Collapse" button appears in the pinned heading once the bar scrolls away.
-- **V4**: V3 without the stacked card edges. Closed, the bar looks like a plain bar; opening, closing and every animation are the same as V3.
+- **V4**: V3 without the stacked card edges. Closed, the bar looks like a plain bar; opening and closing from the bar work the same as V3. Collapsing from the pinned heading deep in the list doesn't scroll back up: the cards fade out and the section snaps to its closed state.
 - **V1** (Figma 15309:22677): the same approve popup, but opening a group drops its avatar bar and lists the cards inline at full width, with a "Hide …" link next to the heading to collapse it again. Not a Fit and Prioritize choices are shared across all versions.
 - **V2: Approve creators popup** (Figma 15308:18705): we've picked 75 creators, split into **Previously approved creators** (18) and **New creators** (57). Each group is a collapsed bar (avatar stack, names, chevron).
 - **Previously approved dropdown** (Figma 15314:50788): opens into 18 cards with a "Previously approved" tag and what happened last time.

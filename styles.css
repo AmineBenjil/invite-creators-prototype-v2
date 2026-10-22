@@ -79,7 +79,7 @@ img { display: block; max-width: none; }
 .overlay { position: absolute; inset: 0; background: rgba(18,18,18,0.48); }
 .modal {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-  width: 866px; height: 820px; overflow: hidden;
+  width: 1024px; height: 820px; overflow: hidden;
   background: #fcfcfc; border: 1px solid #d8d8d8; border-radius: 20px;
   box-shadow: 0 20px 48px 0 rgba(0,0,0,0.16);
 }
@@ -93,9 +93,9 @@ img { display: block; max-width: none; }
 /* Body: scrolls between header and footer when a group is expanded */
 .m-body {
   position: absolute; left: 0; right: 0; top: 63px; bottom: 79px; overflow-y: auto;
-  padding: 32px 51px; display: flex; flex-direction: column; gap: 32px;   /* 52px from the outer edge: 762px content */
+  padding: 40px 81px 32px; display: flex; flex-direction: column; gap: 32px;   /* 82px from the outer edge: 860px content (Figma 15350:68381) */
 }
-.m-intro { display: flex; flex-direction: column; gap: 8px; }
+.m-intro { display: flex; flex-direction: column; gap: 12px; }
 .m-headline { font-size: 18px; font-weight: 700; line-height: normal; letter-spacing: 0.0703px; color: #1c1c1c; white-space: nowrap; }
 .m-lede { width: 600.516px; font-size: 14px; font-weight: 400; line-height: normal; color: #6f6f6f; }
 
@@ -110,7 +110,7 @@ img { display: block; max-width: none; }
 .g-title .num { font-weight: 500; color: #717171; }
 /* Open group: heading sticks under the modal header while its cards scroll beneath */
 .group.open .g-head {
-  position: sticky; top: -32px; z-index: 3; margin: -12px -51px; padding: 12px 51px;   /* -32px cancels the body's top padding */
+  position: sticky; top: -40px; z-index: 3; margin: -12px -81px; padding: 12px 81px;   /* -40px cancels the body's top padding */
   background: #fcfcfc; transition: background .15s, box-shadow .15s;
 }
 .group.open .g-head.stuck { background: #fff; box-shadow: 0 0.5px 0 #e3e3e3; }   /* stroke without changing layout */
@@ -191,6 +191,10 @@ img { display: block; max-width: none; }
 .c-ig12 { position: relative; width: 12px; height: 12px; flex-shrink: 0; }
 .c-ig12 img { position: absolute; left: -0.5px; top: -0.5px; }
 
+.c-soc, .c-soc .c-box { width: 240px; }
+.c-fol { left: 15.5px; }
+.c-eng { left: 124.33px; }
+.c-loc { left: 19.5px; }
 .c-aud { width: auto; flex: 1 0 0; min-width: 1px; }   /* fills the card next to Social Stats */
 .c-age { left: calc(50% - 24px); }
 .c-gender { left: calc(50% + 148.83px); top: calc(50% - 0.5px); }
@@ -250,8 +254,8 @@ img { display: block; max-width: none; }
 .ap .c-foot { padding: 6px 16px; }
 
 /* Skeleton cards: shown only while a group loads the first time */
-.nc.sk { display: none; }
-.g-panel.loading > .nc.sk { display: block; animation: nc-fade .2s ease-out both; }
+.g-panel > .nc.card.sk { display: none; }   /* specific enough to beat the per-version card display rules */
+.g-panel.loading > .nc.card.sk { display: flex; flex-direction: column; animation: nc-fade .2s ease-out both; }
 .g-panel.loading > .nc:not(.sk) { display: none; }
 .sk-row { display: flex; align-items: center; gap: 12px; }
 .sk-col { display: flex; flex-direction: column; gap: 8px; }
@@ -287,6 +291,21 @@ img { display: block; max-width: none; }
 @media (prefers-reduced-motion: reduce) {
   .g-panel.reveal *, .g-panel.reveal > .nc, .sk-b { animation: none !important; }
 }
+
+/* Full-width cards in V1, V3 and V4 (Figma 15352:68445): 24px padding, height follows the content,
+   Social Stats fills the row next to a 443px Audience box, both 60px tall */
+.v1 .nc.card, .v3 .nc.card { height: auto; display: flex; flex-direction: column; }
+.v1 .c-main, .v3 .c-main { position: relative; left: auto; top: auto; width: auto; padding: 23.5px 23.5px 23.5px; }
+.v1 .c-foot, .v3 .c-foot { position: relative; }
+.v1 .c-stats, .v3 .c-stats { gap: 20px; }
+.v1 .c-soc, .v3 .c-soc { width: auto; flex: 1 0 0; min-width: 1px; }
+.v1 .c-soc .c-box, .v3 .c-soc .c-box { width: 100%; }
+.v1 .nc .c-aud, .v3 .nc .c-aud { flex: none; width: 443px; }
+.v1 .c-box, .v3 .c-box { height: 60px; }
+.v1 .nc .c-fol, .v1 .nc .c-loc, .v3 .nc .c-fol, .v3 .nc .c-loc { left: 23.5px; }
+.v1 .nc .c-eng, .v3 .nc .c-eng { left: 176.5px; }
+.v1 .nc .c-age, .v3 .nc .c-age { left: calc(50% - 24px); top: calc(50% - 0.5px); }
+.v1 .nc .c-gender, .v3 .nc .c-gender { left: auto; right: 63.5px; top: calc(50% - 0.5px); transform: translateY(-50%); }
 
 /* Not a Fit row (Figma 15313:23500) */
 .r-who { position: absolute; left: 19.5px;   /* 20px from the outer edge, the same line as card content */ top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 8px; }
@@ -333,7 +352,6 @@ img { display: block; max-width: none; }
 
 /* ===== V1 (Figma 15309:22677): open groups drop the bar and list cards inline ===== */
 .modal.v1 { background: #f8f8f8; }
-.v1 .m-intro { gap: 12px; }
 .v1 .group.open .g-head { background: #f8f8f8; }
 .v1 .group.open .g-head.stuck { background: #fff; }
 .v1 .group.open .g-hide { display: flex; }
@@ -347,12 +365,11 @@ img { display: block; max-width: none; }
 
 /* ===== V3: deck expand. The bar is the top card; cards are tucked under it and spread out on open ===== */
 .modal.v3 { background: #f8f8f8; }
-.v3 .m-intro { gap: 12px; }
 .v3 .g-head { position: relative; z-index: 8; }   /* above the bar (5), so the bar and cards scroll under it */
 .v3 .group.open .g-head { z-index: 8; background: #f8f8f8; }
 .v3 .group.open .g-head.stuck { background: #fff; }
 
-.deck { --d: 560ms; --ease: cubic-bezier(.32, .72, 0, 1); position: relative; display: flex; flex-direction: column; padding-bottom: 12px; }
+.deck { --d: 560ms; --ease: cubic-bezier(.32, .72, 0, 1); position: relative; display: flex; flex-direction: column; }   /* no extra space under the bar: sections keep the 32px rhythm */
 .known {
   position: relative; z-index: 5; display: block; width: 100%; height: 64px; flex-shrink: 0;
   background: #fff; border: 0.5px solid #e0e0e0; border-radius: 16px;
@@ -450,9 +467,9 @@ img { display: block; max-width: none; }
 .sum-row.nofit .sum-faces { opacity: .5; filter: grayscale(1); }
 
 .sum-error { margin-top: -24px; font-size: 13px; line-height: 1.4; color: #c4332b; }
-.sum-foot { display: flex; justify-content: flex-end; gap: 8px; }
+.sum-foot { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
 .sum-back {
-  height: 44px; padding: 0 16px; border-radius: 12px; font-size: 14px; font-weight: 500; color: #1c1c1c; opacity: .8; text-align: center;
+  height: 52px; padding: 0 20px; border-radius: 16px; font-size: 16px; font-weight: 500; color: #1c1c1c; opacity: .8; text-align: center;   /* same size and height as Send */
   transition: opacity .15s, background .15s;
 }
 .sum-back:hover { opacity: 1; background: rgba(0,0,0,.04); }
