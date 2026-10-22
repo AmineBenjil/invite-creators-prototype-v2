@@ -107,7 +107,7 @@ img { display: block; max-width: none; }
 .g-hide { display: none; align-items: center; gap: 16px; font-size: 14px; font-weight: 500; line-height: normal; color: #000; white-space: nowrap; }
 .g-title { font-size: 16px; font-weight: 500; line-height: normal; color: #1c1c1c; white-space: nowrap; }
 .g-title .dot { color: #717171; }
-.g-title .num { font-weight: 500; color: #7a5cfa; }
+.g-title .num { font-weight: 500; color: #717171; }   /* grey on purpose: no colored counts */
 /* Open group: heading sticks under the modal header while its cards scroll beneath */
 .group.open .g-head {
   position: sticky; top: -40px; z-index: 3; margin: -12px -81px; padding: 12px 81px;   /* -40px cancels the body's top padding */
