@@ -84,6 +84,7 @@ function setItem(el, c) {
   el.innerHTML = c.notFit ? rowHtml(c) : cardHtml(c);
   el.classList.toggle('row', c.notFit);
   el.classList.toggle('card', !c.notFit);
+  keepInView(el);
   if (reduceMotion) return;
   const to = el.offsetHeight;
   el.style.height = from + 'px';
@@ -94,6 +95,30 @@ function setItem(el, c) {
   const done = () => { clearTimeout(el._t); el.style.height = ''; el.classList.remove('anim'); };
   el._t = setTimeout(done, 400);   // fallback if transitionend never fires
   el.ontransitionend = e => { if (e.propertyName === 'height') done(); };
+}
+
+// A card collapsing from deep inside it would leave its row above the fold (or under the sticky heading):
+// scroll so the row lands just below the heading, alongside the height animation
+function keepInView(el) {
+  const body = el.closest('.m-body');
+  if (!body || !el.offsetParent) return;   // hidden version: nothing to keep in view
+  const head = el.closest('.group')?.querySelector('.g-head');
+  const floor = body.getBoundingClientRect().top + (head ? head.offsetHeight : 0) + 8;
+  const top = el.getBoundingClientRect().top;
+  if (top >= floor) return;
+  const from = body.scrollTop, to = Math.max(0, from - (floor - top));
+  if (reduceMotion) { body.scrollTop = to; return; }
+  // Tweened by hand: a native smooth scroll gets cancelled when the content shrinks under it
+  cancelAnimationFrame(body._keep);
+  clearTimeout(body._keepT);
+  const t0 = performance.now(), dur = 360;
+  const step = now => {
+    const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+    body.scrollTop = from + (to - from) * e;
+    if (p < 1) body._keep = requestAnimationFrame(step);
+  };
+  body._keep = requestAnimationFrame(step);
+  body._keepT = setTimeout(() => { cancelAnimationFrame(body._keep); body.scrollTop = to; }, dur + 80);   // frames can stall
 }
 
 // ---------- Opening animations ----------
@@ -501,7 +526,7 @@ document.addEventListener('keydown', e => {
 // Read-only: summarizes who gets invited, in what order, and who doesn't. Go back keeps every selection.
 const sum = $('sum');
 const sumDlg = sum.querySelector('.sum-dlg');
-const FACES = 5;
+const FACES = 4;
 let sumOpener = null;
 let sumCloseT;
 const summaryOpen = () => !sum.hidden;
@@ -522,15 +547,16 @@ function summaryData() {
   };
 }
 
+// Each mark is a 24px disc with its glyph, straight from Figma 15367:8086
 const ICONS = {
-  prio: '<img src="assets/prioritize-16-purple.svg" alt="" width="16" height="16">',
-  rest: '<img src="assets/card-bullet-16.svg" alt="" width="16" height="16">',
-  nofit: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 7h7"/></svg>',
+  prio: '<img src="assets/sum-prio-24.svg" alt="" width="24" height="24">',
+  rest: '<img src="assets/sum-rest-24.svg" alt="" width="24" height="24">',
+  nofit: '<img src="assets/sum-nofit-24.svg" alt="" width="24" height="24">',
 };
 
 const rowHtml2 = (kind, title, sub, people, r) => `
   <li class="sum-row ${kind}" style="--r:${r}" title="${esc(people.map(c => c.name).join(', '))}">
-    <span class="sum-mark ${kind}">${ICONS[kind]}</span>
+    <span class="sum-mark">${ICONS[kind]}</span>
     <span class="sum-text"><span class="sum-row-title">${title}</span><span class="sum-row-sub">${sub}</span></span>
     <span class="sum-faces">
       <span class="sum-stack">${people.slice(0, FACES).map(c => `<img src="assets/${c.avatar}.jpg" alt="">`).join('')}</span>
@@ -538,32 +564,40 @@ const rowHtml2 = (kind, title, sub, people, r) => `
     </span>
   </li>`;
 
-// "We'll invite 75 creators to this campaign, including 18 previously approved and 57 new."
-// When everyone left is in one group, name it instead: "We'll invite 56 new creators to this campaign."
+// "We'll invite **73 creators** to this campaign, including **16 previously approved** and **57 new**.
+//  **2 prioritized creators** get the first chance to accept."
+// When everyone left is in one group, name it instead: "We'll invite **56 new creators** to this campaign."
+// The prioritized sentence only shows once they've prioritized someone.
 function inviteLine(d) {
   const kept = [...d.prio, ...d.rest];
   const prev = kept.filter(c => c.source === 'approved').length;
   const fresh = kept.length - prev;
   const who = n => plural(n, 'creator', 'creators');
-  if (!prev || !fresh) return `We'll invite ${kept.length} ${prev ? 'previously approved' : 'new'} ${who(kept.length).replace(/^\d+ /, '')} to this campaign.`;
-  return `We'll invite ${who(kept.length)} to this campaign, including ${prev} previously approved and ${fresh} new.`;
+  const line = !prev || !fresh
+    ? `We'll invite <b>${kept.length} ${prev ? 'previously approved' : 'new'} ${who(kept.length).replace(/^\d+ /, '')}</b> to this campaign.`
+    : `We'll invite <b>${who(kept.length)}</b> to this campaign, including <b>${prev} previously approved</b> and <b>${fresh} new</b>.`;
+  const p = d.prio.length;
+  return p ? `${line} <b>${plural(p, 'prioritized creator', 'prioritized creators')}</b> ${p === 1 ? 'gets' : 'get'} the first chance to accept.` : line;
 }
 
 function summaryHtml(d, error) {
   const n = d.prio.length + d.rest.length;
   const parts = [d.prev && `${d.prev} you've worked with`, d.fresh && `${d.fresh} new`].filter(Boolean);
   const rows = [];
-  if (d.prio.length) rows.push(['prio', `Prioritized (${d.prio.length})`, 'Invited first', d.prio]);
+  if (d.prio.length) rows.push(['prio', `Prioritize (${d.prio.length})`, 'Invited first', d.prio]);
   if (d.rest.length) rows.push(d.prio.length
-    ? ['rest', `Everyone else (${d.rest.length})`, ['Invited right after', ...parts].join(' · '), d.rest]
-    : ['rest', `Your matches (${d.rest.length})`, parts.join(' · '), d.rest]);
+    ? ['rest', `Everyone else (${d.rest.length})`, `Invited right after, ${parts.join(', ')}.`, d.rest]
+    : ['rest', `Your matches (${d.rest.length})`, `${parts.join(', ')}.`.replace(/^./, ch => ch.toUpperCase()), d.rest]);
   if (d.nofit.length) rows.push(['nofit', `Not a fit (${d.nofit.length})`, "Won't get an invite", d.nofit]);
   return `
   <div class="sum-view">
     <div class="sum-top">
       <div class="sum-head">
-        <h2 class="sum-title" id="sumTitle">${n ? 'Good to go?' : 'Nobody to invite yet'}</h2>
-        <p class="sum-sub">${n ? inviteLine(d) : 'You marked everyone as Not a fit. Go back and keep at least one creator.'}</p>
+        <span class="sum-icon" aria-hidden="true"><img src="assets/confirm-send-48.png" alt="" width="40" height="40"></span>
+        <div class="sum-copy">
+          <h2 class="sum-title" id="sumTitle">${n ? 'Good to go?' : 'Nobody to invite yet'}</h2>
+          <p class="sum-sub">${n ? inviteLine(d) : 'You marked everyone as Not a fit. Go back and keep at least one creator.'}</p>
+        </div>
       </div>
       <ul class="sum-rows">${rows.map((row, i) => rowHtml2(...row, i)).join('')}</ul>
     </div>
