@@ -75,26 +75,36 @@ const rowHtml = c => `
 
 const itemHtml = (c, i) => `<div class="nc ${c.notFit ? 'row' : 'card'}${c.source === 'approved' ? ' ap' : ''}" data-id="${c.id}" style="--i:${Math.min(i, REVEAL_CAP)}">${c.notFit ? rowHtml(c) : cardHtml(c)}</div>`;
 
-// Swap a card and its row in place: the slot animates its height, nothing around it jumps
+// Swap a card and its row in place, in two calm beats: the old content fades out where it is,
+// then the slot eases to its new height while the new content fades in. Nothing around it jumps.
+const SWAP_OUT = 160, SWAP_MS = 480;   // keep in step with .nc-out / .nc.anim in styles.css
 function setItem(el, c) {
-  const from = el.offsetHeight;
-  clearTimeout(el._t);
-  el.style.height = '';
+  clearTimeout(el._t); clearTimeout(el._t2);
   el.classList.remove('anim');
-  el.innerHTML = c.notFit ? rowHtml(c) : cardHtml(c);
-  el.classList.toggle('row', c.notFit);
-  el.classList.toggle('card', !c.notFit);
-  keepInView(el);
-  if (reduceMotion) return;
-  const to = el.offsetHeight;
+  el.style.height = '';
+  const swap = () => {
+    el.innerHTML = c.notFit ? rowHtml(c) : cardHtml(c);
+    el.classList.toggle('row', c.notFit);
+    el.classList.toggle('card', !c.notFit);
+  };
+  if (reduceMotion || !el.offsetParent) { swap(); keepInView(el); return; }   // hidden versions just take the new state
+  const from = el.offsetHeight;
   el.style.height = from + 'px';
-  el.querySelectorAll(':scope > *').forEach(n => n.classList.add('nc-in'));
-  void el.offsetHeight;   // commit the start height before animating
-  el.classList.add('anim');
-  el.style.height = to + 'px';
-  const done = () => { clearTimeout(el._t); el.style.height = ''; el.classList.remove('anim'); };
-  el._t = setTimeout(done, 400);   // fallback if transitionend never fires
-  el.ontransitionend = e => { if (e.propertyName === 'height') done(); };
+  el.querySelectorAll(':scope > *').forEach(n => n.classList.add('nc-out'));
+  el._t = setTimeout(() => {
+    swap();
+    el.style.height = '';
+    const to = el.offsetHeight;
+    el.style.height = from + 'px';
+    keepInView(el);
+    el.querySelectorAll(':scope > *').forEach(n => n.classList.add('nc-in'));
+    void el.offsetHeight;   // commit the start height before animating
+    el.classList.add('anim');
+    el.style.height = to + 'px';
+    const done = () => { clearTimeout(el._t2); el.style.height = ''; el.classList.remove('anim'); };
+    el._t2 = setTimeout(done, SWAP_MS + 80);   // fallback if transitionend never fires
+    el.ontransitionend = e => { if (e.propertyName === 'height') done(); };
+  }, SWAP_OUT);
 }
 
 // A card collapsing from deep inside it would leave its row above the fold (or under the sticky heading):
@@ -111,9 +121,9 @@ function keepInView(el) {
   // Tweened by hand: a native smooth scroll gets cancelled when the content shrinks under it
   cancelAnimationFrame(body._keep);
   clearTimeout(body._keepT);
-  const t0 = performance.now(), dur = 360;
+  const t0 = performance.now(), dur = SWAP_MS;   // moves with the collapse, same length and easing
   const step = now => {
-    const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+    const p = Math.min(1, (now - t0) / dur), e = p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
     body.scrollTop = from + (to - from) * e;
     if (p < 1) body._keep = requestAnimationFrame(step);
   };
@@ -478,7 +488,7 @@ function makeDeck(sec, g, v3Body, stack) {
   return {
     relayout() { if (!D.busy) (D.open ? restOpen() : restClosed()); },
     // A creator changed (here or in another version): refresh the labels, then re-pose once the row/card swap settles
-    sync() { labels(); clearTimeout(syncT); syncT = setTimeout(() => this.relayout(), 450); },
+    sync() { labels(); clearTimeout(syncT); syncT = setTimeout(() => this.relayout(), SWAP_OUT + SWAP_MS + 40); },
   };
 }
 
@@ -502,9 +512,10 @@ const setOpen = open => {
   isOpen = open;
   overlay.classList.toggle('hidden', !open);
   Object.entries(modals).forEach(([v, m]) => { m.hidden = !(open && v === version); });
-  // Leaving the success screen: it plays once, then the dashboard shows the "approved" card
+  // Once invites are sent the popup stays on the success screen. It animates the first time only;
+  // after that it reopens settled, and the dashboard shows the "approved" card.
   if (!open && document.querySelector('.modal.is-done')) {
-    document.querySelectorAll('.modal.is-done').forEach(m => m.classList.remove('is-done'));
+    document.querySelectorAll('.modal.is-done').forEach(m => m.classList.add('done-seen'));
     $('sentBanner').hidden = false;
   }
 };
@@ -512,7 +523,7 @@ document.querySelectorAll('.m-close').forEach(b => b.addEventListener('click', (
 overlay.addEventListener('click', () => setOpen(false));
 $('openModal').addEventListener('click', () => setOpen(true));
 document.querySelectorAll('.approve-btn').forEach(b => b.addEventListener('click', () => openSummary(b)));
-// Done on the success screen closes the popup; View list on the dashboard card reopens it on the list
+// Done on the success screen closes the popup; View on the dashboard card reopens it on that screen
 document.addEventListener('click', e => { if (e.target.closest('.m-done .done-btn')) setOpen(false); });
 $('viewList').addEventListener('click', () => setOpen(true));
 document.addEventListener('keydown', e => {
@@ -523,10 +534,9 @@ document.addEventListener('keydown', e => {
 });
 
 // ---------- Invite summary pop-up ("Ready to send N invites?") ----------
-// Read-only: summarizes who gets invited, in what order, and who doesn't. Go back keeps every selection.
+// Read-only: says who gets invited. Cancel keeps every selection.
 const sum = $('sum');
 const sumDlg = sum.querySelector('.sum-dlg');
-const FACES = 4;
 let sumOpener = null;
 let sumCloseT;
 const summaryOpen = () => !sum.hidden;
@@ -542,27 +552,8 @@ function summaryData() {
     prio: kept.filter(c => c.priority),   // prioritized and then removed counts only as Not a fit
     rest,
     nofit: all.filter(c => c.notFit),
-    prev: rest.filter(c => c.source === 'approved').length,
-    fresh: rest.filter(c => c.source === 'new').length,
   };
 }
-
-// Each mark is a 24px disc with its glyph, straight from Figma 15367:8086
-const ICONS = {
-  prio: '<img src="assets/sum-prio-24.svg" alt="" width="24" height="24">',
-  rest: '<img src="assets/sum-rest-24.svg" alt="" width="24" height="24">',
-  nofit: '<img src="assets/sum-nofit-24.svg" alt="" width="24" height="24">',
-};
-
-const rowHtml2 = (kind, title, sub, people, r) => `
-  <li class="sum-row ${kind}" style="--r:${r}" title="${esc(people.map(c => c.name).join(', '))}">
-    <span class="sum-mark">${ICONS[kind]}</span>
-    <span class="sum-text"><span class="sum-row-title">${title}</span><span class="sum-row-sub">${sub}</span></span>
-    <span class="sum-faces">
-      <span class="sum-stack">${people.slice(0, FACES).map(c => `<img src="assets/${c.avatar}.jpg" alt="">`).join('')}</span>
-      ${people.length > FACES ? `<span class="sum-more">+${people.length - FACES}</span>` : ''}
-    </span>
-  </li>`;
 
 // "We'll invite **73 creators** to this campaign, including **16 previously approved** and **57 new**.
 //  **2 prioritized creators** get the first chance to accept."
@@ -580,31 +571,22 @@ function inviteLine(d) {
   return p ? `${line} <b>${plural(p, 'prioritized creator', 'prioritized creators')}</b> ${p === 1 ? 'gets' : 'get'} the first chance to accept.` : line;
 }
 
+// Compact confirm (Figma 15372:8161): the sentence carries the breakdown, Send sits above Cancel
 function summaryHtml(d, error) {
   const n = d.prio.length + d.rest.length;
-  const parts = [d.prev && `${d.prev} you've worked with`, d.fresh && `${d.fresh} new`].filter(Boolean);
-  const rows = [];
-  if (d.prio.length) rows.push(['prio', `Prioritize (${d.prio.length})`, 'Invited first', d.prio]);
-  if (d.rest.length) rows.push(d.prio.length
-    ? ['rest', `Everyone else (${d.rest.length})`, `Invited right after, ${parts.join(', ')}.`, d.rest]
-    : ['rest', `Your matches (${d.rest.length})`, `${parts.join(', ')}.`.replace(/^./, ch => ch.toUpperCase()), d.rest]);
-  if (d.nofit.length) rows.push(['nofit', `Not a fit (${d.nofit.length})`, "Won't get an invite", d.nofit]);
   return `
   <div class="sum-view">
-    <div class="sum-top">
-      <div class="sum-head">
-        <span class="sum-icon" aria-hidden="true"><img src="assets/confirm-send-48.png" alt="" width="40" height="40"></span>
-        <div class="sum-copy">
-          <h2 class="sum-title" id="sumTitle">${n ? 'Good to go?' : 'Nobody to invite yet'}</h2>
-          <p class="sum-sub">${n ? inviteLine(d) : 'You marked everyone as Not a fit. Go back and keep at least one creator.'}</p>
-        </div>
+    <div class="sum-head">
+      <span class="sum-icon" aria-hidden="true"><img src="assets/confirm-send-48.png" alt="" width="40" height="40"></span>
+      <div class="sum-copy">
+        <h2 class="sum-title" id="sumTitle">${n ? 'Good to go?' : 'Nobody to invite yet'}</h2>
+        <p class="sum-sub">${n ? inviteLine(d) : 'You marked everyone as Not a fit. Go back and keep at least one creator.'}</p>
       </div>
-      <ul class="sum-rows">${rows.map((row, i) => rowHtml2(...row, i)).join('')}</ul>
     </div>
     ${error ? `<p class="sum-error" role="alert">${error}</p>` : ''}
     <div class="sum-foot">
-      <button class="sum-back" data-sum="back">Go back</button>
       <button class="sum-send" data-sum="send"${n ? '' : ' disabled'}>${n ? `Send ${invites(n)}` : 'Send invites'}</button>
+      <button class="sum-back" data-sum="back">Cancel</button>
     </div>
   </div>`;
 }
@@ -700,7 +682,6 @@ async function sendInvites(btn) {
   } catch {
     // Keep the summary on screen, with a clear error above the footer
     sumDlg.innerHTML = summaryHtml(d, "We couldn't send the invites. Check your connection and try again.");
-    sumDlg.querySelectorAll('.sum-row').forEach(r => { r.style.animation = 'none'; });
     focusPrimary();
     return;
   }
@@ -715,11 +696,15 @@ async function sendInvites(btn) {
 
 // Success screen inside the Invite Creators popup: the list and footer fade out, the check/confetti/text rise in
 function showSuccess(n) {
-  const modal = modals[version];
-  let done = modal.querySelector('.m-done');
-  if (!done) { done = document.createElement('div'); done.className = 'm-done'; modal.appendChild(done); }
-  done.innerHTML = doneHtml(n);
-  modal.classList.add('is-done');
+  // Every version turns into the success screen, so switching versions doesn't bring the list back
+  Object.values(modals).forEach(modal => {
+    let done = modal.querySelector('.m-done');
+    if (!done) { done = document.createElement('div'); done.className = 'm-done'; modal.appendChild(done); }
+    done.innerHTML = doneHtml(n);
+    modal.classList.add('is-done');
+    modal.classList.toggle('done-seen', modal !== modals[version]);   // only the one on screen animates
+  });
+  const done = modals[version].querySelector('.m-done');
   done.querySelector('.done-btn').focus({ preventScroll: true });
   $('sentCount').textContent = plural(n, 'creator', 'creators');
   // Burst from the check as the disc lands
@@ -780,7 +765,7 @@ function closeFit(sent) {
   clearTimeout(fitCloseT);
   fitCloseT = setTimeout(() => { fit.hidden = true; }, 260);
   if (sent) api.notFitFeedback(id, fitInput.value.trim());
-  if (!fitReasonOnly) setTimeout(() => setNotFit(id, true), 200);   // collapse the card once the blur lifts
+  if (!fitReasonOnly) setTimeout(() => setNotFit(id, true), 260);   // collapse the card once the popup is gone
   else if (sent) document.querySelectorAll(`.nc.row[data-id="${id}"] .r-why`)
     .forEach(b => { b.outerHTML = '<span class="r-sent">Feedback sent</span>'; });
 }

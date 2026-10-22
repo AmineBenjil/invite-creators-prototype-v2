@@ -154,8 +154,9 @@ img { display: block; max-width: none; }
 .nc { position: relative; flex-shrink: 0; background: #fff; border: 0.5px solid #e3e3e3; border-radius: 16px; overflow: hidden; }
 .nc.card { height: 491px; box-shadow: 0 4px 24px 0 rgba(0,0,0,0.08); }
 .nc.row { height: 53px; }
-.nc.anim { transition: height .32s cubic-bezier(.22, 1, .36, 1), box-shadow .32s; }
-.nc-in { animation: nc-fade .24s ease-out both; }
+.nc.anim { transition: height .48s cubic-bezier(.4, 0, .2, 1), box-shadow .48s; }   /* SWAP_MS in app.js */
+.nc-out { opacity: 0; transition: opacity .16s ease-out; }   /* SWAP_OUT in app.js */
+.nc-in { animation: nc-fade .32s ease-out .12s both; }
 @keyframes nc-fade { from { opacity: 0; } }
 
 .c-main { position: absolute; left: 20px; top: 20px; width: calc(100% - 39px);   /* 20px gutters measured from the outer edge, past the 0.5px borders */ display: flex; flex-direction: column; gap: 20px; }
@@ -422,24 +423,23 @@ img { display: block; max-width: none; }
   .kn-stack, .kn-stack .g-av, .kn-stack .g-more, .kn-text .l, .known .g-chev img, .g-collapse { transition-duration: 1ms !important; }
 }
 
-/* ===== Invite summary pop-up (Figma 15367:8086). Previous design saved in legacy/summary-v1 ===== */
+/* ===== Invite summary pop-up (Figma 15372:8161). Earlier designs saved in legacy/summary-v1, -v2 ===== */
 .sum {
   --ease: cubic-bezier(.32, .72, 0, 1);
   position: fixed; inset: 0; z-index: 150; display: flex; align-items: center; justify-content: center; padding: 16px;
-  background: rgba(0,0,0,0); -webkit-backdrop-filter: blur(0); backdrop-filter: blur(0);
-  transition: background .24s, -webkit-backdrop-filter .24s, backdrop-filter .24s;
+  background: rgba(0,0,0,0); transition: background .2s ease-out;
 }
-.sum.in { background: rgba(0,0,0,0.4); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+/* A plain dim, no blur: the popup behind stays readable and nothing smears in */
+.sum.in { background: rgba(0,0,0,0.24); }
 .sum-dlg {
-  width: min(716px, 100% - 32px); max-height: 100%; overflow-y: auto;   /* Figma 623px + 15% */
-  background: #fff; border: 0.5px solid #d5d5d5; border-radius: 32px; padding: 39px 27.5px 27.5px;   /* 0.5px border folded into the padding */
-  opacity: 0; transform: translateY(10px) scale(.97);
-  transition: opacity .22s, transform .34s var(--ease);
+  width: min(448px, 100% - 32px); max-height: 100%; overflow-y: auto;
+  background: #fff; border: 0.5px solid #d5d5d5; border-radius: 24px; padding: 39px 23.5px 16px;   /* 0.5px border folded into the padding */
+  opacity: 0; transform: scale(.985);
+  transition: opacity .2s ease-out, transform .28s ease-out;
 }
 .sum.in .sum-dlg { opacity: 1; transform: none; }
-.sum-view { display: flex; flex-direction: column; gap: 40px; transition: opacity .14s; }   /* + the footer's 16px top = 56px under the list */
+.sum-view { display: flex; flex-direction: column; gap: 57px; transition: opacity .14s; }
 .sum-view.out { opacity: 0; }
-.sum-top { display: flex; flex-direction: column; gap: 32px; }
 .sum-head { display: flex; flex-direction: column; align-items: center; gap: 20px; text-align: center; }
 .sum-icon {
   width: 64px; height: 64px; flex-shrink: 0; border-radius: 100px; border: 0.5px solid #ede8fb;
@@ -449,40 +449,20 @@ img { display: block; max-width: none; }
 .sum-icon img { display: block; width: 40px; height: 40px; object-fit: cover; }
 .sum-copy { display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .sum-title { font-size: 22px; font-weight: 700; line-height: normal; color: #222; letter-spacing: 0.07px; text-wrap: balance; }
-.sum-sub { font-size: 16px; font-weight: 400; line-height: 22px; color: #717171; text-wrap: balance; }   /* as wide as the list below */
+.sum-sub { max-width: 352px; font-size: 16px; font-weight: 400; line-height: 22px; color: #717171; text-wrap: balance; }
 .sum-sub b { font-weight: 600; color: #5d5d5d; white-space: nowrap; }   /* a count never splits from its words */
 
-/* One grey panel, rows split by hairlines */
-.sum-rows { list-style: none; display: flex; flex-direction: column; background: #fcfcfc; border: 1px solid #efefef; border-radius: 20px; overflow: hidden; }
-.sum-row {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 12px;
-  animation: sum-row-in .4s var(--ease) both; animation-delay: calc(60ms + var(--r) * 50ms);
-}
-.sum-row + .sum-row { border-top: 1px solid #efefef; }
-@keyframes sum-row-in { from { opacity: 0; transform: translateY(6px); } }
-.sum-mark { width: 24px; height: 24px; flex-shrink: 0; align-self: flex-start; }
-.sum-mark img { display: block; }
-.sum-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; line-height: normal; }
-.sum-row-title { font-size: 16px; font-weight: 600; color: #111114; }
-.sum-row-sub { max-width: 294px; font-size: 14px; font-weight: 400; color: #5d5d5d; }
-.sum-faces { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
-.sum-stack { display: flex; }
-.sum-stack img { width: 32px; height: 32px; margin-right: -12px; border: 1px solid #f8f8f8; border-radius: 100px; background: #f1b2b2; object-fit: cover; }
-.sum-stack img:last-child { margin-right: 0; }
-.sum-more { width: 32px; font-size: 14px; font-weight: 500; line-height: normal; color: #959595; text-align: center; font-variant-numeric: tabular-nums; }
-.sum-row.nofit .sum-stack { opacity: .6; }
-.sum-row.nofit .sum-stack img { filter: grayscale(1); }   /* Figma: luminosity blend */
-
-.sum-error { margin-top: -24px; font-size: 13px; line-height: 1.4; color: #c4332b; }
-.sum-foot { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding-top: 16px; }
-.sum-back { width: 117px; height: 48px; padding: 0 16px; border-radius: 16px; font-size: 16px; font-weight: 500; line-height: normal; color: #1c1c1c; text-align: center; }
+.sum-error { margin-top: -33px; text-align: center; font-size: 13px; line-height: 1.4; color: #c4332b; }
+/* Send on top at full width, Cancel centered under it */
+.sum-foot { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .sum-send {
-  height: 48px; min-width: 205px; padding: 0 16px; border-radius: 12px; background: #7a5cfa;
+  width: 100%; height: 48px; padding: 0 16px; border-radius: 12px; background: #7a5cfa;
   font-size: 16px; font-weight: 500; line-height: normal; color: #fff; text-align: center; font-variant-numeric: tabular-nums;
   transition: transform .1s, opacity .15s;
 }
 .sum-send:active { transform: scale(.98); }
 .sum-send:disabled { opacity: .4; pointer-events: none; }
+.sum-back { width: 117px; height: 48px; padding: 0 16px; border-radius: 16px; font-size: 16px; font-weight: 500; line-height: normal; color: #1c1c1c; text-align: center; }
 
 /* Confirmation view, swapped in place after Send: disc pops, check draws, ring pulses, then the text rises in */
 .sum-done { display: flex; flex-direction: column; align-items: center; padding: 32px 8px 8px; text-align: center; }
@@ -510,22 +490,18 @@ img { display: block; max-width: none; }
 
 .approve-btn:disabled { opacity: .5; cursor: default; }
 
-@media (max-width: 720px) {
-  .sum-stack img:nth-child(n+4) { display: none; }
-  .sum-send { flex: 1; min-width: 0; }
-}
 @media (prefers-reduced-motion: reduce) {
   .sum, .sum-dlg, .sum-view { transition-duration: 1ms !important; }
-  .sum-row, .done-disc, .done-ring, .sum-done-title, .sum-done-body, .done-btn { animation: none !important; }
+  .done-disc, .done-ring, .sum-done-title, .sum-done-body, .done-btn { animation: none !important; }
   .done-tick { animation: none !important; stroke-dashoffset: 0; }
 }
 
-/* ===== Not a fit feedback (Figma 15343:68271); shares the summary's blurred backdrop ===== */
+/* ===== Not a fit feedback (Figma 15343:68271); shares the summary's backdrop ===== */
 .fit-dlg {
   position: relative; width: min(517px, 100% - 32px); height: 550px; max-height: 100%; overflow: hidden;
   background: #f9fafb; border: 0.5px solid #d5d5d5; border-radius: 24px;
-  opacity: 0; transform: translateY(10px) scale(.97);
-  transition: opacity .22s, transform .34s var(--ease);
+  opacity: 0; transform: scale(.985);
+  transition: opacity .2s ease-out, transform .28s ease-out;
 }
 .sum.in .fit-dlg { opacity: 1; transform: none; }
 .fit-close { position: absolute; right: 23.5px; top: 19.5px; width: 16px; height: 16px; }
@@ -570,6 +546,9 @@ img { display: block; max-width: none; }
 @keyframes m-done-in { from { opacity: 0; } }
 @keyframes m-list-out { from { visibility: visible; opacity: 1; } to { visibility: visible; opacity: 0; } }
 .m-done .sum-done { padding: 0 32px 40px; }
+/* Reopened after the first time: the success screen is simply there, nothing replays */
+.modal.done-seen .m-done, .modal.done-seen .m-done *, .modal.done-seen .m-body, .modal.done-seen .m-foot { animation: none !important; }
+.modal.done-seen .done-tick { stroke-dashoffset: 0; }
 
 /* Dashboard card once invites are sent */
 .sent-banner {
